@@ -24,10 +24,23 @@ with no internet connection.
 
 | Tab | What it does |
 |---|---|
+| **Story** | A data-story dashboard (the landing tab): the family's central reproduction-floor finding told with charts drawn from **real recorded data** (gauge, bars, stat tiles) via the offline chart-kit. |
 | **Projects** | Gallery of every family project. Engines open live in *Analyze*; data/code repos link out (repo + live dashboard). |
 | **Analyze** | Loads any embedded engine (PairwisePro v3.0, MAFI Calculator) in an iframe so you can run a real analysis. |
 | **Benchmark** | The `pairwise70` cross-engine validation harness (vs the R metafor/meta oracle over the 7,545-MA Cochrane corpus). |
-| **Reproduce** | Turns any analysis into a deterministic, exportable **run-record**: inputs + model + seed + app version → `run-record.json` + a runnable `reproduce.R` (metafor) snippet. |
+| **E156 Papers** | The family's E156 micro-papers (real bodies from each repo), with **live contract validation** — sentence count and word count checked against the seven-sentence / ≤156-word E156 rule in the browser. |
+| **Reproduce** | Turns any analysis into an exportable **manifest**: inputs + model + seed + app version + input digest → `run-record.json` + a runnable `reproduce.R` (metafor) snippet. |
+
+### The Story dashboard
+
+The landing tab is a scrollytelling dashboard built with classical narrative devices used
+purely as craft (no religious content): **ring composition** (opens and closes on the same
+number, 0.005), a **recurring refrain**, a **parable**, **gradual disclosure** of the figures,
+a **shift of address** from "they" to "you", and **contrast pairs** (counts vs. means). Every
+chart uses real data — the 14.3% reproduction floor (overall) and the 12.9% / 25.0% / 27.0%
+by-outcome breakdown come straight from `repro-floor-atlas`'s `baseline.json`; family
+composition is derived from the catalog. A "Narrative method" note on the page states the
+techniques explicitly and that they are rhetorical only.
 
 ## What's inside
 
@@ -35,11 +48,13 @@ with no internet connection.
 index.html       # the hub (fully offline; my own code)
 projects.json    # the project catalog — SINGLE SOURCE OF TRUTH (real metadata, no marketing)
 catalog.js       # GENERATED from projects.json (file://-safe; do not edit by hand)
+papers.js        # E156 micro-paper bodies (real text from each repo's e156-submission)
 apps/            # vendored HTML engines (originals rewired to load assets locally)
   PairwisePro-v3.0-advanced.html
   MAFI-Calculator-Complete.html
   vendor/plotly-2.27.0.min.js   # vendored Plotly (offline charts)
-assets/fonts/    # vendored web fonts (woff2 + localized CSS)
+  vendor/chartkit.js            # vendored e156 chart-kit (27 offline SVG primitives)
+assets/fonts/    # vendored web fonts (woff2 + localized CSS) + OFL license texts
 docs/spec.md     # scope, portfolio recon (reused vs net-new), non-goals
 tests/           # validate.py + smoke.py + build_catalog.py
 ```
@@ -72,8 +87,8 @@ so the two can never drift.
 ## Tests
 
 ```
-python tests/validate.py     # 53 structural checks (offline, catalog-sync, R-correctness, a11y, licenses)
-python tests/smoke.py         # 18 headless-browser checks (needs Chrome + selenium)
+python tests/validate.py     # 75 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers)
+python tests/smoke.py         # 25 headless-browser checks (needs Chrome + selenium)
 ```
 
 ## License & attribution

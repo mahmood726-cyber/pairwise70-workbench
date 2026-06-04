@@ -122,6 +122,43 @@ def main():
         ok = fp.is_file() and "SIL OPEN FONT LICENSE" in fp.read_text(encoding="utf-8", errors="replace").upper()
         check(ok, f"OFL license bundled: {ofl}")
 
+    print("== story dashboard + e156 papers ==")
+    check('data-panel="story"' in html, "Story panel present")
+    check('id="panel-papers"' in html, "E156 Papers panel present")
+    check('<script src="apps/vendor/chartkit.js">' in html, "hub loads the offline chart-kit")
+    check('<script src="papers.js">' in html, "hub loads papers.js")
+    for fid in ("figGauge", "figOutcome", "figKind", "figTags"):
+        check(f'id="{fid}"' in html, f"chart slot {fid} present")
+    check("data-refrain" in html, "story refrain present (narrative device)")
+    check("Narrative method" in html, "secular narrative-method note present")
+    # Secular-content guard: the storytelling must use techniques, not religious content.
+    low = html.lower()
+    religious = [w for w in ("allah", "quran", "qur'an", "surah", "verse ", "scripture", "holy", "prophet") if w in low]
+    check(len(religious) == 0, f"no religious content in the page (found: {religious})")
+
+    print("== chart-kit vendored offline ==")
+    ck = ROOT / "apps" / "vendor" / "chartkit.js"
+    check(ck.is_file(), "apps/vendor/chartkit.js present")
+    if ck.is_file():
+        ckt = ck.read_text(encoding="utf-8", errors="replace")
+        ext = re.findall(r'src="https?://|href="https?://|import .*from .*https?://', ckt)
+        check(len(ext) == 0, f"chart-kit has no external resource loads ({len(ext)})")
+        check("window.ChartKit" in ckt or ")(window)" in ckt, "chart-kit exposes window.ChartKit")
+
+    print("== e156 papers data + contract ==")
+    pj = ROOT / "papers.js"
+    check(pj.is_file(), "papers.js present")
+    if pj.is_file():
+        pt = pj.read_text(encoding="utf-8")
+        check("window.PW70_PAPERS" in pt, "papers.js defines window.PW70_PAPERS")
+        for pid in ("repro-floor-atlas", "pairwise70-dataset", "grma", "gwam", "pairwise70-workbench"):
+            check(f'"{pid}"' in pt, f"paper present: {pid}")
+        # The repro-floor results capsule must be a 7-sentence S1-S7 structure.
+        sent = re.search(r'id:\s*"repro-floor-atlas".*?sentences:\s*\[(.*?)\]', pt, re.S)
+        # each sentence sits on its own line ending in '"' (optionally a comma)
+        n = len(re.findall(r'"\s*,?\s*\n', sent.group(1))) if sent else 0
+        check(sent is not None and n == 7, f"repro-floor results capsule has 7 S-sentences (found {n})")
+
     print("== every project has required fields ==")
     for p in projects:
         ok = all(k in p for k in ("id", "name", "kind", "summary", "analysisTypes", "repo"))

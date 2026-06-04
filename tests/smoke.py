@@ -55,6 +55,29 @@ def main():
         opts_count = len(driver.find_elements(By.CSS_SELECTOR, "#engineSelect option"))
         expect(opts_count >= 2, f"engine select has {opts_count} engines (>=2)")
 
+        # Story is the default tab; dashboard charts + tiles render from real data
+        expect(driver.find_element(By.ID, "tab-story").get_attribute("aria-selected") == "true",
+               "Story is the default tab")
+        tiles = driver.find_elements(By.CSS_SELECTOR, "#scaleTiles .tile")
+        expect(len(tiles) >= 3, f"story scale tiles rendered ({len(tiles)})")
+        gauge_kids = driver.execute_script("return document.getElementById('figGauge').childElementCount;")
+        bars_kids = driver.execute_script("return document.getElementById('figOutcome').childElementCount;")
+        expect(gauge_kids > 0, f"ChartKit drew the reproduction-floor gauge ({gauge_kids} nodes)")
+        expect(bars_kids > 0, f"ChartKit drew the outcome-type bars ({bars_kids} nodes)")
+
+        # E156 papers render with live contract validation
+        driver.find_element(By.CSS_SELECTOR, '[data-tab="papers"]').click()
+        papers = driver.find_elements(By.CSS_SELECTOR, "#papers .paper")
+        expect(len(papers) >= 4, f"E156 paper cards rendered ({len(papers)})")
+        page = driver.find_element(By.ID, "papers").text
+        expect("7/7 sentences" in page, "results capsule validated as 7/7 sentences")
+
+        # Story call-to-action jumps tabs
+        driver.find_element(By.CSS_SELECTOR, '[data-tab="story"]').click()
+        driver.find_element(By.CSS_SELECTOR, '[data-goto="analyze"]').click()
+        expect(driver.find_element(By.ID, "tab-analyze").get_attribute("aria-selected") == "true",
+               "story CTA navigates to Analyze")
+
         # Switch to Reproduce tab and generate a run-record
         driver.find_element(By.CSS_SELECTOR, '[data-tab="reproduce"]').click()
         wait.until(EC.visibility_of_element_located((By.ID, "genRecord")))
