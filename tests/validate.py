@@ -218,7 +218,10 @@ def main():
         check('"cumulative"' in mt and ncum == 13, f"top-level cumulative MA has 13 by-year rows (found {ncum})")
         check('"interval"' in mt and '"pi"' in mt, "prediction-interval data present")
         check('"tauDensity"' in mt and '"grid"' in mt and '"density"' in mt, "heterogeneity density present")
-        check('"subgroup"' in mt and mt.count('"label":') >= 3 and "dose" in mt.lower(), "dose-response subgroup data present")
+        # subgroup forest: >=2 strata each with a deduped k and an RR estimate
+        sg = re.search(r'"subgroup":\s*\{.*?"groups":\s*\[(.*?)\]\s*\}', mt, re.S)
+        sgk = len(re.findall(r'"k":', sg.group(1))) if sg else 0
+        check(sg is not None and sgk >= 2, f"subgroup forest has >=2 strata (found {sgk})")
         check('"bayes"' in mt and '"crI"' in mt and '"prior"' in mt, "Bayesian posterior + CrI + prior present")
         check('"reviews"' in mt and mt.count('"forest"') >= 1 and '"rep"' in mt, "multi-review data present")
         # each review must carry a full precomputed deep-dive
@@ -238,6 +241,10 @@ def main():
         gp = re.search(r'"gosh":\s*\{.*?"points":\s*\[\s*\{([^}]*)\}', mt, re.S)
         check(gp is not None and '"i2"' in gp.group(1) and '"y"' not in gp.group(1),
               "GOSH points use i2 key (renders; p.y would be cy=NaN)")
+        # Bayesian grid must be adaptive (different reviews -> different RR grid extents),
+        # else strong-effect CrIs get clipped at a fixed boundary (audit P1-2).
+        gr_ext = sorted(set(re.findall(r'"grid":\s*\[\s*([0-9.]+),', mt)))
+        check(len(gr_ext) >= 2, f"Bayesian grid is data-adaptive ({len(gr_ext)} distinct lower extents)")
         em = re.search(r'"kSmallFrac":\s*([0-9.]+)', mt)
         check(em is not None and 0.4 < float(em.group(1)) < 0.95,
               f"small-k (<10) fraction is realistic ({em.group(1) if em else '?'})")

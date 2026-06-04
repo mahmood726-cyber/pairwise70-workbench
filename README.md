@@ -96,7 +96,7 @@ so the two can never drift.
 ## Tests
 
 ```
-python tests/validate.py     # 133 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
+python tests/validate.py     # 134 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
 python tests/smoke.py         # 53 headless-browser checks (needs Chrome + selenium)
 python tools/build_ma4_data.py   # regenerate data/ma4.js from the real Pairwise70 CSVs + .rda
 ```

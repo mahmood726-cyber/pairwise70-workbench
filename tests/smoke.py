@@ -87,7 +87,7 @@ def main():
         expect("RR" in tip, f"forest hover shows a tooltip ({tip[:30]!r})")
         for fid, name in (("figCumulative","cumulative MA"), ("figInterval","prediction interval"),
                           ("figTau","heterogeneity density"), ("figBayes","Bayesian posterior"),
-                          ("figSubgroup","dose-response subgroup")):
+                          ("figSubgroup","subgroup forest")):
             kids = driver.execute_script(f"return document.getElementById('{fid}').childElementCount;")
             expect(kids > 0, f"ChartKit drew the {name} ({kids} nodes)")
         matrix_kids = driver.execute_script("return document.getElementById('figMatrix').childElementCount;")

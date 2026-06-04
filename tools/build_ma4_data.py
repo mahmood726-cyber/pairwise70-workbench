@@ -26,13 +26,15 @@ DEFAULT_SRC = Path(r"C:\Projects\Pairwise70\analysis")
 DEFAULT_RDA = Path(r"C:\Projects\Pairwise70\data")
 FOREST_REVIEW = "CD000028_pub4"      # antihypertensive review: 6 logRR outcomes, all REML-validated
 FUNNEL_NAME = "All-cause mortality"  # one outcome; Analysis.group 1 = overall (k=13), groups 2-3 = age subgroups
-SUBGROUP_REVIEW = "CD000402_pub5"    # unopposed-estrogen review: clean dose-response subgroups
-SUBGROUP_NAME = "Endometrial hyperplasia at 1 year"
-SUBGROUP_LEVELS = ["Low-dose estrogen", "Moderate-dose estrogen", "High-dose estrogen"]
+SUBGROUP_REVIEW = "CD003774_pub5"    # CMV antiviral prophylaxis in transplant; clean by-organ subgroups
+SUBGROUP_NAME = "CMV disease for different organ transplants"
+SUBGROUP_LEVELS = ["Kidney transplant recipients", "Liver transplant recipients", "Heart transplant recipients"]
 
 
 def read_subgroup(rda_dir):
-    """Real dose-response subgroup forest: pool each estrogen-dose stratum (RR)."""
+    """Subgroup forest: pool each transplant-organ stratum (RR). Restricts to the
+    primary analysis (Analysis.group==1) and dedupes by study so no trial is counted
+    twice (a prior version over-counted studies present under multiple analysis groups)."""
     try:
         import math
         import pyreadr
@@ -42,22 +44,25 @@ def read_subgroup(rda_dir):
     if not f.is_file():
         return None
     a = next(iter(pyreadr.read_r(str(f)).values()))
-    a = a[a["Analysis.name"] == SUBGROUP_NAME]
+    a = a[(a["Analysis.name"] == SUBGROUP_NAME) & (a["Analysis.group"] == 1)]
     groups = []
     for s in SUBGROUP_LEVELS:
         r = a[(a["Subgroup"] == s) & a["Study"].notna() & a["Mean"].notna()
               & a["CI.start"].notna() & a["CI.end"].notna()]
-        yv, vv = [], []
+        seen, yv, vv = set(), [], []
         for _, row in r.iterrows():
+            study = str(row["Study"]).strip()
             m, lo, hi = float(row["Mean"]), float(row["CI.start"]), float(row["CI.end"])
-            if m > 0 and lo > 0 and hi > lo:
-                yv.append(math.log(m))
-                vv.append(((math.log(hi) - math.log(lo)) / (2 * 1.959964)) ** 2)
+            if study in seen or not (m > 0 and lo > 0 and hi > lo):
+                continue
+            seen.add(study)
+            yv.append(math.log(m))
+            vv.append(((math.log(hi) - math.log(lo)) / (2 * 1.959964)) ** 2)
         if len(yv) < 2:
             continue
         mu, se, _, _ = _pool(yv, vv)
-        groups.append({"label": s.replace(" estrogen", ""), "k": len(yv),
-                       "est": round(math.exp(mu), 3),
+        groups.append({"label": s.replace(" transplant recipients", "").replace(" recipients", ""),
+                       "k": len(yv), "est": round(math.exp(mu), 3),
                        "lo": round(math.exp(mu - 1.959964 * se), 3),
                        "hi": round(math.exp(mu + 1.959964 * se), 3)})
     if len(groups) < 2:
@@ -72,7 +77,10 @@ def compute_bayes(points, prior_tau_sd=0.5):
     import math
     yv = [p["x"] for p in points]
     vv = [p["se"] ** 2 for p in points]
-    mus = [-0.45 + 0.9 * i / 199 for i in range(200)]          # logRR support
+    # Adaptive support: span the observed logRR range + margin so the posterior is never
+    # truncated (a fixed [-0.45,0.45] grid clipped the CrI for strong-effect reviews).
+    glo, ghi = min(yv) - 0.6, max(yv) + 0.6
+    mus = [glo + (ghi - glo) * i / 199 for i in range(200)]
     taus = [0.5 * j / 79 for j in range(80)]                   # tau in [0, 0.5]
     grid = [[0.0] * len(taus) for _ in range(len(mus))]
     for ti, tau in enumerate(taus):
@@ -209,6 +217,10 @@ def compute_interval(theta, sigma, tau, k):
     # two-sided t critical value, df = k-1 (small-table lookup; df here is 12)
     tcrit = {1:12.706,2:4.303,3:3.182,4:2.776,5:2.571,6:2.447,7:2.365,8:2.306,9:2.262,
              10:2.228,11:2.201,12:2.179,13:2.160,14:2.145,15:2.131,20:2.086,30:2.042}.get(k-1, 1.96)
+    # CI of the pooled estimate uses z=1.96 (standard random-effects / metafor default,
+    # matching the published REML estimate). This is INTENTIONALLY z, not t_{k-1}: the
+    # t-interval is the prediction interval (below). Using t for the CI without the
+    # Hartung-Knapp variance correction would be a non-standard hybrid, so z stays.
     ci = (math.exp(theta - 1.959964 * sigma), math.exp(theta + 1.959964 * sigma))
     pw = tcrit * math.sqrt(tau ** 2 + sigma ** 2)
     pi = (math.exp(theta - pw), math.exp(theta + pw))
@@ -245,20 +257,30 @@ REVIEW_LABELS = {
 
 
 def _points_for(df, analysis_name):
-    """Overall (no-subgroup) per-study logRR + SE for one outcome."""
+    """One per-study logRR + SE per distinct trial for an outcome.
+    Deterministic dedup: prefer the overall (no-subgroup) row, then the lowest
+    Analysis.group, then study name — so the kept value never depends on R row order."""
     import math
     import re
     sub = df[(df["Analysis.name"] == analysis_name) & df["Study"].notna()
-             & df["Mean"].notna() & df["CI.start"].notna() & df["CI.end"].notna()]
-    seen, pts = set(), []
+             & df["Mean"].notna() & df["CI.start"].notna() & df["CI.end"].notna()].copy()
+    has_grp = "Analysis.group" in sub.columns
+    rows = []
     for _, r in sub.iterrows():
         m, lo, hi = float(r["Mean"]), float(r["CI.start"]), float(r["CI.end"])
+        if not (m > 0 and lo > 0 and hi > lo):
+            continue
         study = str(r["Study"]).strip()
-        # one point per distinct trial (some outcomes list every study only under subgroups)
-        if not (m > 0 and lo > 0 and hi > lo) or study in seen:
+        sg = r["Subgroup"]
+        has_sub = 1 if (sg == sg and str(sg).strip()) else 0       # 0 = overall, preferred
+        grp = int(r["Analysis.group"]) if has_grp and r["Analysis.group"] == r["Analysis.group"] else 999
+        rows.append((has_sub, grp, study, m, lo, hi, r["Study.year"]))
+    rows.sort(key=lambda t: (t[0], t[1], t[2]))                    # deterministic order
+    seen, pts = set(), []
+    for has_sub, grp, study, m, lo, hi, yr in rows:
+        if study in seen:
             continue
         seen.add(study)
-        yr = r["Study.year"]
         year = int(yr) if (yr == yr and yr is not None) else (
             int(re.search(r"(19|20)\d{2}", study).group(0)) if re.search(r"(19|20)\d{2}", study) else None)
         pts.append({"study": study, "year": year, "x": round(math.log(m), 6),

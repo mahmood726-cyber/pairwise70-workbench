@@ -204,11 +204,11 @@
 
       <div class="beat">
         <h3>And it generalises.</h3>
-        <p>The same machinery reads any review. Here is a different one entirely — unopposed
-          estrogen and endometrial hyperplasia — split by dose. Every stratum shows sharply raised
-          risk, a dose-response pattern a single pooled number would have flattened.</p>
+        <p>The same machinery reads any review. Here is a different one entirely — antiviral
+          prophylaxis against CMV disease after organ transplant — split by transplant type. Every
+          stratum shows a consistent protective effect a single pooled number would have flattened.</p>
         <figure class="figure"><svg id="figSubgroup" class="chart"></svg>
-          <figcaption>Subgroup forest by estrogen dose, <span id="subgroupRev">CD000402_pub5</span>.
+          <figcaption>Subgroup forest by transplant organ, <span id="subgroupRev">CD003774_pub5</span>.
             <span class="src">Pairwise70 .rda</span></figcaption></figure>
       </div>
 
@@ -807,7 +807,7 @@ function renderStory(){
     // Real dose-response subgroup forest (different review)
     if(ma4 && ma4.subgroup && Array.isArray(ma4.subgroup.groups)){
       CK.renderSubgroup(document.getElementById("figSubgroup"), ma4.subgroup.groups,
-        {measure:"RR", log:true, null:1, claim:"Endometrial hyperplasia by estrogen dose"});
+        {measure:"RR", log:true, null:1, claim:"CMV disease by transplant organ"});
       const sr = document.getElementById("subgroupRev");
       if(sr) sr.textContent = ma4.subgroup.review;
     }
@@ -853,10 +853,10 @@ function renderBenchmarkCharts(){
     {n:String(s.nReviews), l:"reviews checked"},
     {n:Number(s.maxAbsThetaDiff).toExponential(1), l:"max |Δθ| vs metafor"},
     {n:Number(s.maxAbsSeDiff).toExponential(1), l:"max |ΔSE|"},
-    {n:esc(s.oracle), l:"oracle"}
+    {n:s.oracle, l:"oracle"}
   ];
   document.getElementById("benchTiles").innerHTML = tiles.map(t =>
-    `<div class="tile"><div class="n" style="font-size:19px">${t.n}</div><div class="l">${t.l}</div></div>`).join("");
+    `<div class="tile"><div class="n" style="font-size:19px">${esc(t.n)}</div><div class="l">${esc(t.l)}</div></div>`).join("");
   if(!CK) return;
   try{
     CK.renderScatter(document.getElementById("figBench"),
