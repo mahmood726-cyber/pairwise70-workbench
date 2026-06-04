@@ -27,7 +27,7 @@ with no internet connection.
 | **Story** | A data-story dashboard (the landing tab): the family's central reproduction-floor finding told with charts drawn from **real recorded data** (gauge, bars, stat tiles) via the offline chart-kit. |
 | **Projects** | Gallery of every family project. Engines open live in *Analyze*; data/code repos link out (repo + live dashboard). |
 | **Analyze** | Loads any embedded engine (PairwisePro v3.0, MAFI Calculator) in an iframe so you can run a real analysis. |
-| **Benchmark** | The `pairwise70` cross-engine validation harness (vs the R metafor/meta oracle over the 7,545-MA Cochrane corpus). |
+| **Benchmark** | Real engine-vs-`metafor` agreement: 100 reviews plotted on the identity line (max \|Δθ\| ≈ 6e-06), from `Pairwise70/ma4_metafor_validation.csv`, plus the harness list. |
 | **E156 Papers** | The family's E156 micro-papers (real bodies from each repo), with **live contract validation** — sentence count and word count checked against the seven-sentence / ≤156-word E156 rule in the browser. |
 | **Reproduce** | Turns any analysis into an exportable **manifest**: inputs + model + seed + app version + input digest → `run-record.json` + a runnable `reproduce.R` (metafor) snippet. |
 
@@ -87,9 +87,15 @@ so the two can never drift.
 ## Tests
 
 ```
-python tests/validate.py     # 75 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers)
-python tests/smoke.py         # 25 headless-browser checks (needs Chrome + selenium)
+python tests/validate.py     # 83 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
+python tests/smoke.py         # 29 headless-browser checks (needs Chrome + selenium)
+python tools/build_ma4_data.py   # regenerate data/ma4.js from the real Pairwise70 CSVs
 ```
+
+Chart types now in use (all real data, offline via the chart-kit): **gauge** (reproduction
+floor), **bars** (by-outcome, family-by-kind, analysis-type frequency), **stat tiles**,
+**forest plot** (six pooled risk ratios of a real Cochrane review, metafor-validated), and a
+**benchmark agreement scatter** (engine vs `metafor` across 100 reviews).
 
 ## License & attribution
 

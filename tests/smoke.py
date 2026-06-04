@@ -65,6 +65,19 @@ def main():
         expect(gauge_kids > 0, f"ChartKit drew the reproduction-floor gauge ({gauge_kids} nodes)")
         expect(bars_kids > 0, f"ChartKit drew the outcome-type bars ({bars_kids} nodes)")
 
+        # Real forest plot drew on the Story tab
+        forest_kids = driver.execute_script("return document.getElementById('figForest').childElementCount;")
+        expect(forest_kids > 0, f"ChartKit drew the real forest plot ({forest_kids} nodes)")
+
+        # Benchmark tab: agreement scatter + validation tiles from real metafor data
+        driver.find_element(By.CSS_SELECTOR, '[data-tab="benchmark"]').click()
+        bench_kids = driver.execute_script("return document.getElementById('figBench').childElementCount;")
+        expect(bench_kids > 0, f"ChartKit drew the benchmark agreement scatter ({bench_kids} nodes)")
+        btiles = driver.find_elements(By.CSS_SELECTOR, "#benchTiles .tile")
+        expect(len(btiles) >= 3, f"benchmark validation tiles rendered ({len(btiles)})")
+        expect("metafor" in driver.find_element(By.ID, "benchTiles").text.lower(),
+               "benchmark tiles name the metafor oracle")
+
         # E156 papers render with live contract validation
         driver.find_element(By.CSS_SELECTOR, '[data-tab="papers"]').click()
         papers = driver.find_elements(By.CSS_SELECTOR, "#papers .paper")

@@ -159,6 +159,22 @@ def main():
         n = len(re.findall(r'"\s*,?\s*\n', sent.group(1))) if sent else 0
         check(sent is not None and n == 7, f"repro-floor results capsule has 7 S-sentences (found {n})")
 
+    print("== real-data charts (forest + benchmark agreement) ==")
+    check('<script src="data/ma4.js">' in html, "hub loads data/ma4.js")
+    check('id="figForest"' in html, "Story forest-plot slot present")
+    check('id="figBench"' in html, "Benchmark agreement-scatter slot present")
+    md = ROOT / "data" / "ma4.js"
+    check(md.is_file(), "data/ma4.js present (generated from real CSVs)")
+    if md.is_file():
+        mt = md.read_text(encoding="utf-8")
+        check("window.PW70_MA4" in mt, "ma4.js defines window.PW70_MA4")
+        check('"forestReview": "CD000028_pub4"' in mt, "forest uses a real review id")
+        check('"agreement"' in mt and '"maxAbsThetaDiff"' in mt, "benchmark agreement data present")
+        # the engine should match metafor closely (sanity on the real numbers)
+        m = re.search(r'"maxAbsThetaDiff":\s*([0-9.eE+-]+)', mt)
+        ok = m and float(m.group(1)) < 1e-2
+        check(bool(ok), f"max |Δθ| vs metafor is small ({m.group(1) if m else '?'} < 1e-2)")
+
     print("== every project has required fields ==")
     for p in projects:
         ok = all(k in p for k in ("id", "name", "kind", "summary", "analysisTypes", "repo"))

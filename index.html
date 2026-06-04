@@ -176,6 +176,16 @@
         </div>
       </div>
 
+      <div class="beat">
+        <h3>One analysis, in full.</h3>
+        <p>This is not a sketch. Here are six outcomes from a single real Cochrane review in the
+          corpus — pooled as risk ratios, each estimate validated against <code>metafor</code> to the
+          sixth decimal. Left of the line favours treatment.</p>
+        <figure class="figure"><svg id="figForest" class="chart"></svg>
+          <figcaption>Pooled risk ratios, review <span id="forestRev">CD000028_pub4</span>.
+            <span class="src">Pairwise70 ma4_results</span></figcaption></figure>
+      </div>
+
       <div class="beat ring-close">
         <h3>Return to the number.</h3>
         <p>0.005 is not a flaw to be patched; it is a limit to be known. The point was never to win the argument —
@@ -227,6 +237,12 @@
   <section class="panel" id="panel-benchmark" role="tabpanel" aria-labelledby="tab-benchmark" tabindex="0" data-panel="benchmark">
     <h2>Benchmark</h2>
     <p class="lead" id="benchLead"></p>
+    <h3 style="font-size:15px;margin:6px 0 10px">Validation against the R oracle (metafor)</h3>
+    <div class="tiles" id="benchTiles" style="margin-bottom:14px"></div>
+    <figure class="figure" style="max-width:560px"><svg id="figBench" class="chart"></svg>
+      <figcaption>Each point is one Cochrane review: the workbench-family engine's pooled estimate
+        vs. <code>metafor</code>'s. Points lie on the identity line. <span class="src">Pairwise70 ma4_metafor_validation</span></figcaption></figure>
+    <h3 style="font-size:15px;margin:22px 0 10px">Harnesses</h3>
     <div id="benchCards" class="grid"></div>
   </section>
 
@@ -284,6 +300,7 @@
 <script src="apps/vendor/chartkit.js"></script>
 <script src="catalog.js"></script>
 <script src="papers.js"></script>
+<script src="data/ma4.js"></script>
 <script>
 "use strict";
 const APP_VERSION = "1.0.0";
@@ -581,7 +598,42 @@ function renderStory(){
       .sort((a,b) => b.value-a.value).slice(0,6);
     CK.renderBars(document.getElementById("figTags"), topTags,
       {percent:false, claim:"Most common analysis types"});
+    // Real forest plot: pooled logRR + SE per outcome of one Cochrane review
+    const ma4 = window.PW70_MA4;
+    if(ma4 && Array.isArray(ma4.forest) && ma4.forest.length){
+      const studies = ma4.forest.map(r => ({
+        label: r.label + " (k=" + r.k + ")",
+        est: Math.exp(r.theta),
+        lo: Math.exp(r.theta - 1.96 * r.sigma),
+        hi: Math.exp(r.theta + 1.96 * r.sigma),
+        weight: r.k, included: true
+      }));
+      CK.renderForest(document.getElementById("figForest"), studies,
+        {log:true, null:1, measure:"RR", claim:"Pooled risk ratios"});
+      const rev = document.getElementById("forestRev");
+      if(rev) rev.textContent = ma4.forestReview;
+    }
   }catch(err){ console.warn("chart render skipped:", err); }
+}
+
+/* ---- Benchmark: real engine-vs-metafor agreement ---- */
+function renderBenchmarkCharts(){
+  const ma4 = window.PW70_MA4; if(!ma4 || !ma4.summary) return;
+  const s = ma4.summary;
+  const tiles = [
+    {n:String(s.nReviews), l:"reviews checked"},
+    {n:Number(s.maxAbsThetaDiff).toExponential(1), l:"max |Δθ| vs metafor"},
+    {n:Number(s.maxAbsSeDiff).toExponential(1), l:"max |ΔSE|"},
+    {n:esc(s.oracle), l:"oracle"}
+  ];
+  document.getElementById("benchTiles").innerHTML = tiles.map(t =>
+    `<div class="tile"><div class="n" style="font-size:19px">${t.n}</div><div class="l">${t.l}</div></div>`).join("");
+  if(!CK) return;
+  try{
+    CK.renderScatter(document.getElementById("figBench"),
+      ma4.agreement.map(a => ({x:a.x, y:a.y})),
+      {claim:"Engine vs metafor pooled logRR"});
+  }catch(err){ console.warn("bench chart skipped:", err); }
 }
 // Story call-to-action buttons jump to other tabs
 document.querySelectorAll("[data-goto]").forEach(b =>
@@ -626,6 +678,7 @@ renderPapers();
 renderGallery();
 buildEngineSelect();
 renderBenchmark();
+renderBenchmarkCharts();
 buildReproProjectSelect();
 openEngine(engines[0].id, false);
 document.getElementById("genRecord").addEventListener("click", generateRecord);
