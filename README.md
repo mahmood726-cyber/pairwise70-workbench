@@ -30,7 +30,7 @@ with no internet connection.
 | **Projects** | Gallery of every family project. Engines open live in *Analyze*; data/code repos link out (repo + live dashboard). |
 | **Analyze** | Loads any embedded engine (PairwisePro v3.0, MAFI Calculator) in an iframe so you can run a real analysis. |
 | **Benchmark** | Real engine-vs-`metafor` agreement: 100 reviews plotted on the identity line (max \|Δθ\| ≈ 6e-06), from `Pairwise70/ma4_metafor_validation.csv`, plus the harness list. |
-| **Issues** | A taxonomy of what can go wrong in a Cochrane MA — corpus-computed (k-distribution: 70% have k<10; estimator sensitivity FE/DL/PM; Egger small-study) plus a real trim-and-fill worked example (Egger t=4.7; RR 2.62 → 2.31, 6 imputed) and canonical concerns linked to the family project that probes each. |
+| **Issues** | A taxonomy of what can go wrong in a Cochrane MA — corpus-computed (k-distribution: 70% have k<10; estimator sensitivity FE/DL/PM; Egger small-study) plus small-study adjustment (trim-and-fill + PET-PEESE) on a genuinely asymmetric outcome, a GRADE-style certainty screen, and canonical concerns linked to the family project that probes each. |
 | **E156 Papers** | The family's E156 micro-papers (real bodies from each repo), with **live contract validation** — sentence count and word count checked against the seven-sentence / ≤156-word E156 rule in the browser. |
 | **Reproduce** | Turns any analysis into an exportable **manifest**: inputs + model + seed + app version + input digest → `run-record.json` + a runnable `reproduce.R` (metafor) snippet. |
 
@@ -96,8 +96,8 @@ so the two can never drift.
 ## Tests
 
 ```
-python tests/validate.py     # 128 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
-python tests/smoke.py         # 49 headless-browser checks (needs Chrome + selenium)
+python tests/validate.py     # 133 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
+python tests/smoke.py         # 53 headless-browser checks (needs Chrome + selenium)
 python tools/build_ma4_data.py   # regenerate data/ma4.js from the real Pairwise70 CSVs + .rda
 ```
 

@@ -74,6 +74,17 @@ def main():
         expect(loo_kids > 0, f"ChartKit drew the leave-one-out forest ({loo_kids} nodes)")
         gosh_pts = driver.execute_script("return document.getElementById('figGOSH').querySelectorAll('circle').length;")
         expect(gosh_pts > 500, f"ChartKit drew the GOSH cloud ({gosh_pts} subset points)")
+        # regression guard: GOSH points must have a real y-coordinate (was cy=NaN via wrong field)
+        gosh_cy = driver.execute_script(
+            "var c=document.getElementById('figGOSH').querySelector('circle');"
+            "return c?parseFloat(c.getAttribute('cy')):NaN;")
+        expect(gosh_cy == gosh_cy and gosh_cy > 0, f"GOSH points have a valid y-coordinate (cy={gosh_cy}, not NaN)")
+        # tooltips fire on hover (interaction)
+        tip = driver.execute_script(
+            "var g=document.querySelector('#figForest g[role=listitem]')||document.querySelector('#figForest g');"
+            "if(!g)return '';g.dispatchEvent(new MouseEvent('mouseenter',{bubbles:true,clientX:200,clientY:200}));"
+            "var t=document.querySelector('.ck-tip');return t?t.textContent:'';")
+        expect("RR" in tip, f"forest hover shows a tooltip ({tip[:30]!r})")
         for fid, name in (("figCumulative","cumulative MA"), ("figInterval","prediction interval"),
                           ("figTau","heterogeneity density"), ("figBayes","Bayesian posterior"),
                           ("figSubgroup","dose-response subgroup")):
@@ -121,7 +132,11 @@ def main():
         pfo = driver.execute_script("return document.getElementById('figPubForest').childElementCount;")
         expect(pf >= 21, f"trim-and-fill funnel shows observed + imputed points ({pf})")
         expect(pfo > 0, f"before/after forest drew ({pfo} nodes)")
-        expect("imputed" in driver.find_element(By.ID, "panel-issues").text, "pub-bias panel labels imputed studies")
+        issues_txt = driver.find_element(By.ID, "panel-issues").text
+        expect("imputed" in issues_txt, "pub-bias panel labels imputed studies")
+        expect("PET-PEESE" in issues_txt, "PET-PEESE adjustment shown")
+        grd = driver.execute_script("return document.getElementById('figGrade').childElementCount;")
+        expect(grd > 0, f"GRADE traffic-light drew ({grd} nodes)")
 
         # E156 papers render with live contract validation
         driver.find_element(By.CSS_SELECTOR, '[data-tab="papers"]').click()

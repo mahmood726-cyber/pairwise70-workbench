@@ -367,11 +367,20 @@
           <strong><span id="pbK0">—</span> studies imputed</strong> (hollow). Egger t=<span id="pbT">—</span>,
           p=<span id="pbP">—</span>. <span class="src">CD001396_pub4 .rda</span></figcaption></figure>
       <figure class="figure"><svg id="figPubForest" class="chart"></svg>
-        <figcaption>Pooled RR <strong>before vs after</strong> trim-and-fill. Trim-and-fill is a
-          sensitivity analysis only — never the primary result.</figcaption></figure>
+        <figcaption>Pooled RR <strong>before vs after</strong> adjustment, by three methods.
+          Trim-and-fill and PET-PEESE are sensitivity analyses only — never the primary result.</figcaption></figure>
     </div>
+    <p class="sub" id="pubNote" style="font-size:12px;margin:8px 0 0"></p>
 
-    <h3 style="font-size:15px;margin:22px 0 10px">The broader catalogue</h3>
+    <h3 style="font-size:15px;margin:24px 0 10px">GRADE — certainty of the evidence (automated screen)</h3>
+    <p class="lead">A GRADE-style read of the domains that <em>can</em> be computed from the data
+      (inconsistency, imprecision, publication bias). Risk-of-bias and indirectness need manual
+      review and are marked "not assessed" — so these are provisional, not a published GRADE rating.</p>
+    <figure class="figure"><svg id="figGrade" class="chart"></svg>
+      <figcaption>Domains per review; ● no serious concern, ▼ serious (downgrade), ? not assessed.
+        Overall certainty is in each row label. <span class="src">recomputed</span></figcaption></figure>
+
+    <h3 style="font-size:15px;margin:24px 0 10px">The broader catalogue</h3>
     <div id="issueCards" class="grid"></div>
   </section>
 
@@ -758,7 +767,7 @@ function renderStory(){
     // GOSH (real subset estimates vs I^2)
     if(ma4 && ma4.gosh && Array.isArray(ma4.gosh.points)){
       CK.renderGOSH(document.getElementById("figGOSH"), ma4.gosh.points,
-        {measure:"RR", log:true, null:1, claim:"GOSH"});
+        {measure:"RR", log:true, null:1, width:760, height:420, claim:"GOSH (all-cause mortality)"});
       const gs = document.getElementById("goshShown"), gt = document.getElementById("goshTotal");
       if(gs) gs.textContent = ma4.gosh.shown.toLocaleString();
       if(gt) gt.textContent = ma4.gosh.total.toLocaleString();
@@ -921,7 +930,8 @@ function renderReviewBrowse(rev){
     CK.renderCumulative($("figCumX"), rev.cumulative.rows,
       {measure:"RR", log:true, null:1, overall:rev.cumulative.overall, claim:"Cumulative RR by year"});
     // GOSH
-    CK.renderGOSH($("figGOSHX"), rev.gosh.points, {measure:"RR", log:true, null:1, claim:"GOSH"});
+    CK.renderGOSH($("figGOSHX"), rev.gosh.points,
+      {measure:"RR", log:true, null:1, width:760, height:420, claim:"GOSH"});
     // Captions
     $("revLabel").textContent = rev.label;
     $("revRep").textContent = rev.rep.name;
@@ -970,14 +980,31 @@ function renderIssues(){
         CK.renderFunnel($("figPubFunnel"), pb.points.map(p => ({x:p.x, se:p.se, label:p.study})),
           {measure:"logRR", pooled:pb.pooledLogOrig, imputed:pb.imputed,
            adjusted:Math.log(pb.adjusted.est), claim:pb.outcome});
-        CK.renderForest($("figPubForest"), [
+        const pbRows = [
           {label:"Observed (k="+pb.k+")", est:pb.original.est, lo:pb.original.lo, hi:pb.original.hi, weight:2, included:true},
           {label:"Trim-and-fill (+"+pb.k0+")", est:pb.adjusted.est, lo:pb.adjusted.lo, hi:pb.adjusted.hi, weight:2, included:true}
-        ], {log:true, null:1, measure:"RR", claim:"Before vs after adjustment"});
+        ];
+        if(pb.petpeese) pbRows.push({label:"PET-PEESE ("+pb.petpeese.used+")",
+          est:pb.petpeese.adjusted.est, lo:pb.petpeese.adjusted.lo, hi:pb.petpeese.adjusted.hi, weight:2, included:true});
+        CK.renderForest($("figPubForest"), pbRows, {log:true, null:1, measure:"RR", claim:"Before vs after adjustment"});
       }catch(err){ console.warn("pubbias charts skipped:", err); }
       $("pbOutcome").textContent = pb.outcome;
       $("pbK").textContent = pb.k; $("pbK0").textContent = pb.k0;
       $("pbT").textContent = pb.egger.t; $("pbP").textContent = pb.egger.p < 0.001 ? "<0.001" : pb.egger.p;
+      if(pb.petpeese){
+        const pp = pb.petpeese;
+        $("pubNote").innerHTML = "The two adjustments <strong>disagree</strong>: trim-and-fill nudges RR "
+          + pb.original.est + " → " + pb.adjusted.est + ", but PET-PEESE (procedure stopped at <strong>"
+          + esc(pp.used) + "</strong>, PET p=" + pp.petP + ") pulls it to <strong>" + pp.adjusted.est
+          + "</strong> [" + pp.adjusted.lo + ", " + pp.adjusted.hi + "] — i.e. much of the effect may be a small-study artifact. "
+          + "When methods disagree this much, the pooled estimate should be read with caution.";
+      }
+    }
+    // GRADE traffic-light
+    if(iss.grade && CK){
+      try{ CK.renderTrafficLight(document.getElementById("figGrade"),
+        {cols:iss.grade.cols, rows:iss.grade.rows, levels:iss.grade.levels}); }
+      catch(err){ console.warn("grade skipped:", err); }
     }
     if(iss.egger){
       const e = iss.egger;

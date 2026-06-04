@@ -418,7 +418,8 @@ def read_pubbias(rda_dir):
     return {"review": PUBBIAS_REVIEW, "outcome": PUBBIAS_OUTCOME, "k": n, "k0": k0,
             "egger": eg, "pooledLogOrig": round(mu0, 6),
             "points": [{"study": p["study"], "x": p["x"], "se": p["se"]} for p in pts],
-            "imputed": imputed, "original": rr(mu0, se0), "adjusted": rr(muA, seA)}
+            "imputed": imputed, "original": rr(mu0, se0), "adjusted": rr(muA, seA),
+            "petpeese": compute_petpeese(pts)}
 
 
 def compute_egger(points):
@@ -443,6 +444,72 @@ def compute_egger(points):
     p = math.erfc(abs(t) / math.sqrt(2))               # normal approx (k>=10)
     return {"intercept": round(intercept, 3), "t": round(t, 2), "p": round(p, 3),
             "k": n, "note": "normal approx; Egger has low power for k<10"}
+
+
+def compute_petpeese(points):
+    """FAT-PET-PEESE small-study adjustment (Stanley & Doucouliagos, WLS 1/v weights).
+    PET first; if PET rejects the no-effect null, report the PEESE estimate."""
+    import math
+    yi = [p["x"] for p in points]
+    vi = [p["se"] ** 2 for p in points]
+    sei = [p["se"] for p in points]
+    wi = [1.0 / v for v in vi]
+    n = len(yi)
+
+    def wls(xs):
+        sw = sum(wi)
+        sx = sum(w * x for w, x in zip(wi, xs))
+        sy = sum(w * y for w, y in zip(wi, yi))
+        sxx = sum(w * x * x for w, x in zip(wi, xs))
+        sxy = sum(w * x * y for w, x, y in zip(wi, xs, yi))
+        det = sw * sxx - sx * sx
+        if abs(det) < 1e-15:
+            return None
+        b1 = (sw * sxy - sx * sy) / det
+        b0 = (sy - b1 * sx) / sw
+        resid = [y - (b0 + b1 * x) for x, y in zip(xs, yi)]
+        s2 = sum(w * r * r for w, r in zip(wi, resid)) / (n - 2)
+        se0 = math.sqrt(max(0.0, s2 * sxx / det))
+        return b0, b1, se0
+
+    pet = wls(sei)        # PET: regress effect on SE
+    peese = wls(vi)       # PEESE: regress effect on variance
+    if not pet or not peese:
+        return None
+    t = pet[0] / pet[2] if pet[2] > 0 else 0.0
+    p_pet = math.erfc(abs(t) / math.sqrt(2))
+    used = "PEESE" if p_pet < 0.05 else "PET"     # PET rejects null -> use PEESE estimate
+    b0, se0 = (peese[0], peese[2]) if used == "PEESE" else (pet[0], pet[2])
+    return {"petEst": round(math.exp(pet[0]), 3), "petP": round(p_pet, 3),
+            "peeseEst": round(math.exp(peese[0]), 3), "used": used,
+            "adjusted": {"est": round(math.exp(b0), 3),
+                         "lo": round(math.exp(b0 - 1.959964 * se0), 3),
+                         "hi": round(math.exp(b0 + 1.959964 * se0), 3)}}
+
+
+def compute_grade(reviews):
+    """A GRADE-style automated screen of the data-computable certainty domains.
+    RoB and indirectness need manual review and are flagged 'not assessed'."""
+    rows = []
+    for rev in reviews:
+        pts = rev["rep"]["points"]
+        yv = [p["x"] for p in pts]
+        vv = [p["se"] ** 2 for p in pts]
+        import math
+        mu, se, _, i2 = _pool(yv, vv)
+        lo, hi = math.exp(mu - 1.959964 * se), math.exp(mu + 1.959964 * se)
+        eg = compute_egger(pts)
+        incons = "serious" if i2 >= 50 else "ok"
+        imprec = "serious" if (lo < 1 < hi) or len(pts) < 10 else "ok"
+        pubb = "serious" if (eg and eg["p"] < 0.10) else "ok"
+        serious = sum(1 for d in (incons, imprec, pubb) if d == "serious")
+        cert = ["High", "Moderate", "Low", "Very low"][min(3, serious)]
+        rows.append({"label": rev["label"][:18] + " · " + cert,
+                     "cells": ["na", incons, "na", imprec, pubb], "certainty": cert})
+    return {"cols": ["RoB", "Inconsist.", "Indirect.", "Imprecis.", "Pub.bias"], "rows": rows,
+            "levels": {"ok": {"color": "#009E73", "symbol": "●", "label": "no serious concern"},
+                       "serious": {"color": "#D55E00", "symbol": "▼", "label": "serious — downgrade"},
+                       "na": {"color": "#c2c6cb", "symbol": "?", "label": "not assessed (needs manual review)"}}}
 
 
 def _histogram(values, edges, labels):
@@ -475,7 +542,8 @@ def compute_gosh(points, cap=2500):
         Q = sum(w * (y - ybar) ** 2 for w, y in zip(wf, yy))
         df = len(idx) - 1
         i2 = max(0.0, (Q - df) / Q) * 100.0 if Q > 0 else 0.0
-        allpts.append({"x": round(math.exp(ybar), 4), "y": round(i2, 1)})
+        # renderGOSH reads p.i2 for the y-axis (I^2); p.y would render at cy=NaN
+        allpts.append({"x": round(math.exp(ybar), 4), "i2": round(i2, 1)})
     total = len(allpts)
     if total > cap:                                              # deterministic systematic sample
         step = total / cap
@@ -568,6 +636,7 @@ def main():
         "estimators": compute_estimators(funnel["points"]) if funnel else None,
         "egger": compute_egger(funnel["points"]) if funnel else None,
         "pubbias": read_pubbias(args.rda),
+        "grade": compute_grade(reviews) if reviews else None,
     }
 
     data = {

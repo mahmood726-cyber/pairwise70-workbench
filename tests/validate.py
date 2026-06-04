@@ -129,8 +129,13 @@ def main():
     check('id="panel-issues"' in html, "Issues tab/panel present")
     for fid in ("figKhist", "figEstim", "issueCards", "eggerTiles", "figPubFunnel", "figPubForest"):
         check(f'id="{fid}"' in html, f"Issues slot {fid} present")
-    check("trim-and-fill" in html.lower() and "sensitivity analysis only" in html.lower(),
-          "trim-and-fill labelled sensitivity-only (advanced-stats rule)")
+    lo_html = html.lower()
+    check("trim-and-fill" in lo_html and "sensitivity anal" in lo_html
+          and "never the primary result" in lo_html,
+          "trim-and-fill/PET-PEESE labelled sensitivity-only (advanced-stats rule)")
+    check('id="figGrade"' in html and "PET-PEESE" in html, "GRADE + PET-PEESE present")
+    check("not a published GRADE rating" in html or "provisional" in html.lower(),
+          "GRADE labelled provisional / not official (honesty)")
     check("const ISSUES = [" in html, "issue taxonomy present")
     # no fabricated-looking DOIs in the issues copy; canonical author-year citations only
     iss = html.split("const ISSUES = [", 1)[1].split("];", 1)[0]
@@ -227,6 +232,12 @@ def main():
         check('"pubbias"' in mt and '"imputed"' in mt and '"adjusted"' in mt, "trim-and-fill pubbias data present")
         pb = re.search(r'"pubbias".*?"k0":\s*(\d+)', mt, re.S)
         check(pb is not None and int(pb.group(1)) > 0, f"trim-and-fill imputed >0 studies (k0={pb.group(1) if pb else '?'})")
+        check('"petpeese"' in mt and '"used"' in mt and '"peeseEst"' in mt, "PET-PEESE data present")
+        check('"grade"' in mt and '"certainty"' in mt, "GRADE domain data present")
+        # GOSH points must carry i2 (the y field renderGOSH reads), not y
+        gp = re.search(r'"gosh":\s*\{.*?"points":\s*\[\s*\{([^}]*)\}', mt, re.S)
+        check(gp is not None and '"i2"' in gp.group(1) and '"y"' not in gp.group(1),
+              "GOSH points use i2 key (renders; p.y would be cy=NaN)")
         em = re.search(r'"kSmallFrac":\s*([0-9.]+)', mt)
         check(em is not None and 0.4 < float(em.group(1)) < 0.95,
               f"small-k (<10) fraction is realistic ({em.group(1) if em else '?'})")
