@@ -127,8 +127,10 @@ def main():
     for fid in ("figForestX", "figFunnelX", "figIntervalX", "figBayesX", "figLOOX", "figCumX", "figGOSHX"):
         check(f'id="{fid}"' in html, f"explorer slot {fid} present (full reactive deep-dive)")
     check('id="panel-issues"' in html, "Issues tab/panel present")
-    for fid in ("figKhist", "figEstim", "issueCards", "eggerTiles"):
+    for fid in ("figKhist", "figEstim", "issueCards", "eggerTiles", "figPubFunnel", "figPubForest"):
         check(f'id="{fid}"' in html, f"Issues slot {fid} present")
+    check("trim-and-fill" in html.lower() and "sensitivity analysis only" in html.lower(),
+          "trim-and-fill labelled sensitivity-only (advanced-stats rule)")
     check("const ISSUES = [" in html, "issue taxonomy present")
     # no fabricated-looking DOIs in the issues copy; canonical author-year citations only
     iss = html.split("const ISSUES = [", 1)[1].split("];", 1)[0]
@@ -222,6 +224,9 @@ def main():
               "every review deep-dive has loo + bayes + gosh")
         check('"issues"' in mt and '"kHist"' in mt and '"estimators"' in mt and '"egger"' in mt,
               "issues data present (kHist, estimators, egger)")
+        check('"pubbias"' in mt and '"imputed"' in mt and '"adjusted"' in mt, "trim-and-fill pubbias data present")
+        pb = re.search(r'"pubbias".*?"k0":\s*(\d+)', mt, re.S)
+        check(pb is not None and int(pb.group(1)) > 0, f"trim-and-fill imputed >0 studies (k0={pb.group(1) if pb else '?'})")
         em = re.search(r'"kSmallFrac":\s*([0-9.]+)', mt)
         check(em is not None and 0.4 < float(em.group(1)) < 0.95,
               f"small-k (<10) fraction is realistic ({em.group(1) if em else '?'})")

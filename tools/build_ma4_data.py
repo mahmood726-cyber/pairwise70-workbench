@@ -354,6 +354,73 @@ def compute_estimators(points):
             row("Random (Paule-Mandel)", *re_pool(tau2_pm), tau2_pm)]
 
 
+PUBBIAS_REVIEW = "CD001396_pub4"
+PUBBIAS_OUTCOME = "Response rates"
+
+
+def read_pubbias(rda_dir):
+    """A real outcome with funnel asymmetry: Egger + Duval-Tweedie trim-and-fill.
+    Shows how much a small-study/publication-bias adjustment moves the pooled RR."""
+    try:
+        import math
+        import pyreadr
+    except ImportError:
+        return None
+    f = Path(rda_dir) / (PUBBIAS_REVIEW + "_data.rda")
+    if not f.is_file():
+        return None
+    df = next(iter(pyreadr.read_r(str(f)).values()))
+    pts = _points_for(df, PUBBIAS_OUTCOME)
+    if len(pts) < 10:
+        return None
+    ys = [p["x"] for p in pts]
+    vs = [p["se"] ** 2 for p in pts]
+    n = len(ys)
+
+    def dl(yy, vv):
+        wf = [1.0 / v for v in vv]
+        sw = sum(wf)
+        yb = sum(w * y for w, y in zip(wf, yy)) / sw
+        Q = sum(w * (y - yb) ** 2 for w, y in zip(wf, yy))
+        d = len(yy) - 1
+        C = sw - sum(w * w for w in wf) / sw
+        t2 = max(0.0, (Q - d) / C) if C > 0 else 0.0
+        ws = [1.0 / (v + t2) for v in vv]
+        sws = sum(ws)
+        return sum(w * y for w, y in zip(ws, yy)) / sws, math.sqrt(1.0 / sws)
+
+    # Duval & Tweedie L0 trim-and-fill (RE centering)
+    mu, _ = dl(ys, vs)
+    k0 = 0
+    for _ in range(50):
+        order = sorted(range(n), key=lambda i: abs(ys[i] - mu))
+        signs = [1 if ys[order[r]] > mu else -1 for r in range(n)]
+        Tn = sum((r + 1) for r in range(n) if signs[r] > 0)
+        L0 = (4 * Tn - n * (n + 1)) / (2 * n - 1)
+        k = max(0, int(round(L0)))
+        keep = order[:n - k]
+        muN, _ = dl([ys[i] for i in keep], [vs[i] for i in keep])
+        if k == k0 and abs(muN - mu) < 1e-9:
+            mu, k0 = muN, k
+            break
+        mu, k0 = muN, k
+    ext = sorted(range(n), key=lambda i: -abs(ys[i] - mu))[:k0]
+    imputed = [{"x": round(2 * mu - ys[i], 6), "se": round(math.sqrt(vs[i]), 6)} for i in ext]
+    mu0, se0 = dl(ys, vs)
+    ys2 = ys + [2 * mu - ys[i] for i in ext]
+    vs2 = vs + [vs[i] for i in ext]
+    muA, seA = dl(ys2, vs2)
+    eg = compute_egger(pts)
+
+    def rr(m, s):
+        return {"est": round(math.exp(m), 3), "lo": round(math.exp(m - 1.959964 * s), 3),
+                "hi": round(math.exp(m + 1.959964 * s), 3)}
+    return {"review": PUBBIAS_REVIEW, "outcome": PUBBIAS_OUTCOME, "k": n, "k0": k0,
+            "egger": eg, "pooledLogOrig": round(mu0, 6),
+            "points": [{"study": p["study"], "x": p["x"], "se": p["se"]} for p in pts],
+            "imputed": imputed, "original": rr(mu0, se0), "adjusted": rr(muA, seA)}
+
+
 def compute_egger(points):
     """Egger's regression test for small-study effects (intercept != 0)."""
     import math
@@ -500,6 +567,7 @@ def main():
         "kN": len(ks),
         "estimators": compute_estimators(funnel["points"]) if funnel else None,
         "egger": compute_egger(funnel["points"]) if funnel else None,
+        "pubbias": read_pubbias(args.rda),
     }
 
     data = {

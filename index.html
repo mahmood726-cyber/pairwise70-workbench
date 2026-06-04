@@ -357,7 +357,21 @@
     </div>
     <div class="tiles" id="eggerTiles" style="margin:16px 0"></div>
 
-    <h3 style="font-size:15px;margin:20px 0 10px">The broader catalogue</h3>
+    <h3 style="font-size:15px;margin:22px 0 10px">Publication bias, adjusted — a worked example</h3>
+    <p class="lead">A real outcome that <em>does</em> show funnel asymmetry. Trim-and-fill imputes the
+      "missing" small negative trials and re-pools — a sensitivity check on how much small-study bias
+      may inflate the result.</p>
+    <div class="fig-row">
+      <figure class="figure"><svg id="figPubFunnel" class="chart"></svg>
+        <figcaption>Funnel for <em><span id="pbOutcome">—</span></em> (k=<span id="pbK">—</span>):
+          <strong><span id="pbK0">—</span> studies imputed</strong> (hollow). Egger t=<span id="pbT">—</span>,
+          p=<span id="pbP">—</span>. <span class="src">CD001396_pub4 .rda</span></figcaption></figure>
+      <figure class="figure"><svg id="figPubForest" class="chart"></svg>
+        <figcaption>Pooled RR <strong>before vs after</strong> trim-and-fill. Trim-and-fill is a
+          sensitivity analysis only — never the primary result.</figcaption></figure>
+    </div>
+
+    <h3 style="font-size:15px;margin:22px 0 10px">The broader catalogue</h3>
     <div id="issueCards" class="grid"></div>
   </section>
 
@@ -950,6 +964,21 @@ function renderIssues(){
     }catch(err){ console.warn("issue charts skipped:", err); }
     if(iss.kSmallFrac!=null) document.getElementById("issKsmall").textContent = Math.round(iss.kSmallFrac*100)+"%";
     if(iss.kN) document.getElementById("issKn").textContent = iss.kN.toLocaleString();
+    if(iss.pubbias){
+      const pb = iss.pubbias, $ = id => document.getElementById(id);
+      try{
+        CK.renderFunnel($("figPubFunnel"), pb.points.map(p => ({x:p.x, se:p.se, label:p.study})),
+          {measure:"logRR", pooled:pb.pooledLogOrig, imputed:pb.imputed,
+           adjusted:Math.log(pb.adjusted.est), claim:pb.outcome});
+        CK.renderForest($("figPubForest"), [
+          {label:"Observed (k="+pb.k+")", est:pb.original.est, lo:pb.original.lo, hi:pb.original.hi, weight:2, included:true},
+          {label:"Trim-and-fill (+"+pb.k0+")", est:pb.adjusted.est, lo:pb.adjusted.lo, hi:pb.adjusted.hi, weight:2, included:true}
+        ], {log:true, null:1, measure:"RR", claim:"Before vs after adjustment"});
+      }catch(err){ console.warn("pubbias charts skipped:", err); }
+      $("pbOutcome").textContent = pb.outcome;
+      $("pbK").textContent = pb.k; $("pbK0").textContent = pb.k0;
+      $("pbT").textContent = pb.egger.t; $("pbP").textContent = pb.egger.p < 0.001 ? "<0.001" : pb.egger.p;
+    }
     if(iss.egger){
       const e = iss.egger;
       document.getElementById("eggerTiles").innerHTML = [

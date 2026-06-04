@@ -117,6 +117,11 @@ def main():
         expect(es > 0, f"estimator-sensitivity forest drew ({es} nodes)")
         expect(len(cards) >= 6, f"issue taxonomy cards rendered ({len(cards)})")
         expect("Egger" in driver.find_element(By.ID, "eggerTiles").text, "Egger small-study tiles present")
+        pf = driver.execute_script("return document.getElementById('figPubFunnel').querySelectorAll('circle').length;")
+        pfo = driver.execute_script("return document.getElementById('figPubForest').childElementCount;")
+        expect(pf >= 21, f"trim-and-fill funnel shows observed + imputed points ({pf})")
+        expect(pfo > 0, f"before/after forest drew ({pfo} nodes)")
+        expect("imputed" in driver.find_element(By.ID, "panel-issues").text, "pub-bias panel labels imputed studies")
 
         # E156 papers render with live contract validation
         driver.find_element(By.CSS_SELECTOR, '[data-tab="papers"]').click()

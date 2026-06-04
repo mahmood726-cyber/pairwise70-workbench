@@ -48002,6 +48002,163 @@ window.PW70_MA4 = {
       "p": 0.905,
       "k": 13,
       "note": "normal approx; Egger has low power for k<10"
+    },
+    "pubbias": {
+      "review": "CD001396_pub4",
+      "outcome": "Response rates",
+      "k": 21,
+      "k0": 6,
+      "egger": {
+        "intercept": 2.039,
+        "t": 4.72,
+        "p": 0.0,
+        "k": 21,
+        "note": "normal approx; Egger has low power for k<10"
+      },
+      "pooledLogOrig": 0.9636,
+      "points": [
+        {
+          "study": "Eriksson 2008",
+          "x": 1.080913,
+          "se": 0.618861
+        },
+        {
+          "study": "Freeman 2004",
+          "x": 0.332134,
+          "se": 0.490355
+        },
+        {
+          "study": "Halbreich 2002",
+          "x": 0.524608,
+          "se": 0.267521
+        },
+        {
+          "study": "Kornstein 2006",
+          "x": 0.890182,
+          "se": 0.373283
+        },
+        {
+          "study": "Landen 2007",
+          "x": 1.665008,
+          "se": 0.510679
+        },
+        {
+          "study": "Steiner 2005",
+          "x": 1.026794,
+          "se": 0.327961
+        },
+        {
+          "study": "Wikander 1998",
+          "x": 1.852384,
+          "se": 1.068717
+        },
+        {
+          "study": "Yonkers 2015",
+          "x": 0.592275,
+          "se": 0.268195
+        },
+        {
+          "study": "Cohen 2004",
+          "x": 0.609745,
+          "se": 0.337346
+        },
+        {
+          "study": "Crnobaric 1998",
+          "x": 1.89712,
+          "se": 0.899074
+        },
+        {
+          "study": "Eriksson 1995",
+          "x": 2.67031,
+          "se": 0.859089
+        },
+        {
+          "study": "Freeman 1999a",
+          "x": 0.884251,
+          "se": 0.416673
+        },
+        {
+          "study": "GlaxoSmithKline 1996b",
+          "x": 0.980829,
+          "se": 0.775365
+        },
+        {
+          "study": "GlaxoSmithKline 2001",
+          "x": 0.413723,
+          "se": 0.326676
+        },
+        {
+          "study": "Ozeren 1997",
+          "x": 1.871802,
+          "se": 0.759554
+        },
+        {
+          "study": "Pearlstein 1997",
+          "x": 4.007333,
+          "se": 1.30035
+        },
+        {
+          "study": "Pearlstein 2005",
+          "x": 0.704576,
+          "se": 0.315449
+        },
+        {
+          "study": "Steiner 1995",
+          "x": 1.189584,
+          "se": 0.314833
+        },
+        {
+          "study": "Stone 1991",
+          "x": 3.583519,
+          "se": 1.317616
+        },
+        {
+          "study": "Yonkers 1997",
+          "x": 1.061366,
+          "se": 0.265745
+        },
+        {
+          "study": "Yonkers 2013",
+          "x": 1.722767,
+          "se": 0.983797
+        }
+      ],
+      "imputed": [
+        {
+          "x": -2.385845,
+          "se": 1.30035
+        },
+        {
+          "x": -1.962031,
+          "se": 1.317616
+        },
+        {
+          "x": -1.048822,
+          "se": 0.859089
+        },
+        {
+          "x": -0.275632,
+          "se": 0.899074
+        },
+        {
+          "x": -0.250314,
+          "se": 0.759554
+        },
+        {
+          "x": -0.230896,
+          "se": 1.068717
+        }
+      ],
+      "original": {
+        "est": 2.621,
+        "lo": 2.068,
+        "hi": 3.322
+      },
+      "adjusted": {
+        "est": 2.312,
+        "lo": 1.757,
+        "hi": 3.043
+      }
     }
   },
   "agreement": [
