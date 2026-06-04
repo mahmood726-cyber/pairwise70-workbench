@@ -91,6 +91,28 @@ def main():
         expect("metafor" in driver.find_element(By.ID, "benchTiles").text.lower(),
                "benchmark tiles name the metafor oracle")
 
+        # Interactive review dropdown re-feeds forest + funnel (back to Story tab first)
+        driver.find_element(By.CSS_SELECTOR, '[data-tab="story"]').click()
+        opts_r = driver.find_elements(By.CSS_SELECTOR, "#reviewSelect option")
+        expect(len(opts_r) >= 3, f"review dropdown populated ({len(opts_r)} reviews)")
+        fx0 = driver.execute_script("return document.getElementById('figForestX').childElementCount;")
+        from selenium.webdriver.support.ui import Select as _Sel
+        _Sel(driver.find_element(By.ID, "reviewSelect")).select_by_index(1)
+        fx1 = driver.execute_script("return document.getElementById('figForestX').childElementCount;")
+        funx = driver.execute_script("return document.getElementById('figFunnelX').querySelectorAll('circle').length;")
+        expect(fx0 > 0 and fx1 > 0, f"browse forest redraws on review change ({fx0}->{fx1})")
+        expect(funx > 0, f"browse funnel has study points ({funx})")
+
+        # Issues tab: corpus-computed charts + taxonomy
+        driver.find_element(By.CSS_SELECTOR, '[data-tab="issues"]').click()
+        kh = driver.execute_script("return document.getElementById('figKhist').childElementCount;")
+        es = driver.execute_script("return document.getElementById('figEstim').childElementCount;")
+        cards = driver.find_elements(By.CSS_SELECTOR, "#issueCards .card")
+        expect(kh > 0, f"k-distribution chart drew ({kh} nodes)")
+        expect(es > 0, f"estimator-sensitivity forest drew ({es} nodes)")
+        expect(len(cards) >= 6, f"issue taxonomy cards rendered ({len(cards)})")
+        expect("Egger" in driver.find_element(By.ID, "eggerTiles").text, "Egger small-study tiles present")
+
         # E156 papers render with live contract validation
         driver.find_element(By.CSS_SELECTOR, '[data-tab="papers"]').click()
         papers = driver.find_elements(By.CSS_SELECTOR, "#papers .paper")

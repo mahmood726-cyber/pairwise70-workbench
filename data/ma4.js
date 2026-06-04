@@ -10922,6 +10922,612 @@ window.PW70_MA4 = {
     ],
     "prior": "tau ~ Half-Normal(0, 0.5), flat mu"
   },
+  "reviews": [
+    {
+      "id": "CD000028_pub4",
+      "label": "Antihypertensives in the elderly",
+      "forest": [
+        {
+          "label": "All-cause mortality",
+          "theta": -0.0802494857150028,
+          "sigma": 0.0359942340156618,
+          "k": 13
+        },
+        {
+          "label": "Cause of cardiovascular mortality",
+          "theta": -0.353769439067356,
+          "sigma": 0.0975156650975464,
+          "k": 12
+        },
+        {
+          "label": "Cardiovascular mortality and morbidity",
+          "theta": -0.298984943838834,
+          "sigma": 0.0551517215345209,
+          "k": 15
+        },
+        {
+          "label": "Cerebrovascular mortality and morbidity",
+          "theta": -0.41077693522139,
+          "sigma": 0.0596774237613357,
+          "k": 13
+        },
+        {
+          "label": "Coronary heart disease mortality and morbidity",
+          "theta": -0.246538336220259,
+          "sigma": 0.0613585568676356,
+          "k": 11
+        },
+        {
+          "label": "Withdrawal due to adverse effects",
+          "theta": 0.734545637981153,
+          "sigma": 0.426854203321646,
+          "k": 4
+        }
+      ],
+      "rep": {
+        "name": "Cardiovascular mortality and morbidity",
+        "k": 15,
+        "points": [
+          {
+            "study": "ATTMH 1981",
+            "year": 1981,
+            "x": -0.268638,
+            "se": 0.224466
+          },
+          {
+            "study": "Coope 1986",
+            "year": 1986,
+            "x": -0.276606,
+            "se": 0.126457
+          },
+          {
+            "study": "EWPHBPE 1989",
+            "year": 1989,
+            "x": -0.308858,
+            "se": 0.144623
+          },
+          {
+            "study": "HSCSG 1974",
+            "year": 1974,
+            "x": -0.214157,
+            "se": 0.212424
+          },
+          {
+            "study": "HYVET 2008",
+            "year": 2008,
+            "x": -0.34636,
+            "se": 0.106712
+          },
+          {
+            "study": "HYVET P 2003",
+            "year": 1999,
+            "x": -0.045072,
+            "se": 0.234408
+          },
+          {
+            "study": "Kuramoto 1981",
+            "year": 1981,
+            "x": -0.744973,
+            "se": 0.563123
+          },
+          {
+            "study": "MRC-O 1992",
+            "year": 1992,
+            "x": -0.166733,
+            "se": 0.078754
+          },
+          {
+            "study": "MRC-TMH 1985",
+            "year": 1985,
+            "x": -0.271196,
+            "se": 0.153402
+          },
+          {
+            "study": "SHEP 1991",
+            "year": 1991,
+            "x": -0.437165,
+            "se": 0.072737
+          },
+          {
+            "study": "SHEP-P 1989",
+            "year": 1986,
+            "x": -0.430609,
+            "se": 0.32104
+          },
+          {
+            "study": "STOP 1991",
+            "year": 1991,
+            "x": -0.589377,
+            "se": 0.126591
+          },
+          {
+            "study": "Sprackling 1981",
+            "year": 1981,
+            "x": 0.035308,
+            "se": 0.074674
+          },
+          {
+            "study": "Syst-Eur 1991",
+            "year": 1993,
+            "x": -0.348797,
+            "se": 0.108735
+          },
+          {
+            "study": "VA-II 1970",
+            "year": 1970,
+            "x": -0.898038,
+            "se": 0.318653
+          }
+        ],
+        "theta": -0.298984943838834,
+        "sigma": 0.0551517215345209,
+        "tau": 0.147467967229349
+      }
+    },
+    {
+      "id": "CD000219_pub5",
+      "label": "Antibiotics for acute otitis media",
+      "forest": [
+        {
+          "label": "Pain",
+          "theta": -0.277144910767231,
+          "sigma": 0.0648358084386874,
+          "k": 17
+        },
+        {
+          "label": "Vomiting, diarrhoea or rash",
+          "theta": 0.396702176720809,
+          "sigma": 0.0827533659332279,
+          "k": 11
+        },
+        {
+          "label": "Abnormal tympanometry",
+          "theta": -0.137904427053229,
+          "sigma": 0.0725979645750119,
+          "k": 9
+        },
+        {
+          "label": "Tympanic membrane perforation",
+          "theta": -0.66972301954717,
+          "sigma": 0.346268203673242,
+          "k": 7
+        },
+        {
+          "label": "Contralateral otitis (in unilateral cases)",
+          "theta": -0.364072114546521,
+          "sigma": 0.250458709471697,
+          "k": 6
+        },
+        {
+          "label": "Late AOM recurrences",
+          "theta": -0.0786100397524487,
+          "sigma": 0.0944670218302047,
+          "k": 6
+        }
+      ],
+      "rep": {
+        "name": "Pain",
+        "k": 17,
+        "points": [
+          {
+            "study": "Burke 1991",
+            "year": 1991,
+            "x": -0.011385,
+            "se": 0.138743
+          },
+          {
+            "study": "Le Saux 2005",
+            "year": 2005,
+            "x": -0.272346,
+            "se": 0.117542
+          },
+          {
+            "study": "Thalin 1985",
+            "year": 1985,
+            "x": -0.006309,
+            "se": 0.140142
+          },
+          {
+            "study": "T\u00e4htinen 2011",
+            "year": 2011,
+            "x": -0.221893,
+            "se": 0.148364
+          },
+          {
+            "study": "van Buchem 1981",
+            "year": 1981,
+            "x": 0.005786,
+            "se": 0.348648
+          },
+          {
+            "study": "Appelman 1991",
+            "year": 1991,
+            "x": -0.120399,
+            "se": 0.396819
+          },
+          {
+            "study": "Halsted 1968",
+            "year": 1968,
+            "x": 0.056006,
+            "se": 0.385376
+          },
+          {
+            "study": "Kaleida 1991",
+            "year": 1991,
+            "x": -0.684985,
+            "se": 0.273616
+          },
+          {
+            "study": "Mygind 1981",
+            "year": 1981,
+            "x": -0.592106,
+            "se": 0.272532
+          },
+          {
+            "study": "Damoiseaux 2000",
+            "year": 2000,
+            "x": -0.204519,
+            "se": 0.09514
+          },
+          {
+            "study": "Tapiainen 2014",
+            "year": 2014,
+            "x": -2.708045,
+            "se": 1.444581
+          },
+          {
+            "study": "Hoberman 2011",
+            "year": 2011,
+            "x": -1.098613,
+            "se": 0.344884
+          },
+          {
+            "study": "Shahbaznejad 2021",
+            "year": 2021,
+            "x": -0.644237,
+            "se": 0.206244
+          },
+          {
+            "study": "Spiro 2006",
+            "year": 2006,
+            "x": -0.093255,
+            "se": 0.095848
+          },
+          {
+            "study": "Little 2001",
+            "year": 2001,
+            "x": -0.443507,
+            "se": 0.220156
+          },
+          {
+            "study": "McCormick 2005",
+            "year": 2005,
+            "x": -0.499538,
+            "se": 0.21903
+          },
+          {
+            "study": "Neumark 2007",
+            "year": 2007,
+            "x": -0.749028,
+            "se": 0.853016
+          }
+        ],
+        "theta": -0.277144910767231,
+        "sigma": 0.0648358084386874,
+        "tau": 0.159298977290208
+      }
+    },
+    {
+      "id": "CD001155_pub3",
+      "label": "Bisphosphonates / fracture prevention",
+      "forest": [
+        {
+          "label": "Clinical vertebral fractures",
+          "theta": -0.36350280049296,
+          "sigma": 0.123861303224644,
+          "k": 35
+        },
+        {
+          "label": "Non-vertebral fractures",
+          "theta": -0.107011731226152,
+          "sigma": 0.0691099851028399,
+          "k": 69
+        },
+        {
+          "label": "Hip fractures",
+          "theta": -0.446309545548818,
+          "sigma": 0.18543200272701,
+          "k": 17
+        },
+        {
+          "label": "Wrist fractures",
+          "theta": -0.287528475306062,
+          "sigma": 0.183738724494625,
+          "k": 15
+        },
+        {
+          "label": "Radiographic vertebral fractures",
+          "theta": -0.222982621769727,
+          "sigma": 0.184293145538144,
+          "k": 11
+        },
+        {
+          "label": "Withdrawals due to adverse events",
+          "theta": -0.0121163009726581,
+          "sigma": 0.0541089849651749,
+          "k": 36
+        },
+        {
+          "label": "Serious adverse events",
+          "theta": -0.0640658464880101,
+          "sigma": 0.0634490698387775,
+          "k": 17
+        },
+        {
+          "label": "Gastrointestinal adverse events",
+          "theta": 0.0115365702974752,
+          "sigma": 0.0243823914270351,
+          "k": 21
+        },
+        {
+          "label": "Atypical femoral fracture",
+          "theta": -0.00937036049192853,
+          "sigma": 0.664609583739235,
+          "k": 9
+        }
+      ],
+      "rep": {
+        "name": "Non-vertebral fractures",
+        "k": 13,
+        "points": [
+          {
+            "study": "FIT-CF 1998",
+            "year": 1998,
+            "x": -0.117254,
+            "se": 0.079563
+          },
+          {
+            "study": "Lewiecki 2007",
+            "year": 2007,
+            "x": 0.0,
+            "se": 1.398756
+          },
+          {
+            "study": "McClung 1998",
+            "year": 1998,
+            "x": -0.488353,
+            "se": 0.714744
+          },
+          {
+            "study": "Pols 1999",
+            "year": 1999,
+            "x": -0.658093,
+            "se": 0.2785
+          },
+          {
+            "study": "Qin 2007",
+            "year": 2007,
+            "x": -0.875468,
+            "se": 1.605203
+          },
+          {
+            "study": "Yan 2009",
+            "year": 2009,
+            "x": -1.098613,
+            "se": 0.812112
+          },
+          {
+            "study": "Bone 2000",
+            "year": 2000,
+            "x": -0.609766,
+            "se": 0.68493
+          },
+          {
+            "study": "FIT-VF 1996",
+            "year": 1996,
+            "x": -0.209966,
+            "se": 0.11393
+          },
+          {
+            "study": "Michalska 2006",
+            "year": 2006,
+            "x": -0.693147,
+            "se": 1.199747
+          },
+          {
+            "study": "Cosman 2005",
+            "year": 2005,
+            "x": -0.609766,
+            "se": 0.68493
+          },
+          {
+            "study": "Hosking 1998",
+            "year": 1998,
+            "x": 0.459985,
+            "se": 0.335981
+          },
+          {
+            "study": "Bone 1997",
+            "year": 1997,
+            "x": -0.597105,
+            "se": 0.389704
+          },
+          {
+            "study": "Nakamura 2014",
+            "year": 2014,
+            "x": -0.519125,
+            "se": 0.458749
+          }
+        ],
+        "theta": -0.107011731226152,
+        "sigma": 0.0691099851028399,
+        "tau": 0.166503829387629
+      }
+    },
+    {
+      "id": "CD000478_pub5",
+      "label": "Maintenance of remission (IBD)",
+      "forest": [
+        {
+          "label": "Failure to maintain remission",
+          "theta": -0.375860737773536,
+          "sigma": 0.0833621253375476,
+          "k": 10
+        },
+        {
+          "label": "Withdrawal due to adverse event",
+          "theta": 0.309004706982283,
+          "sigma": 0.275330477282334,
+          "k": 6
+        },
+        {
+          "label": "Pancreatitis",
+          "theta": 1.36052718360718,
+          "sigma": 1.09137890945622,
+          "k": 2
+        },
+        {
+          "label": "Bone marrow suppression",
+          "theta": 0.803865815548789,
+          "sigma": 1.03297213979041,
+          "k": 2
+        }
+      ],
+      "rep": {
+        "name": "Failure to maintain remission",
+        "k": 10,
+        "points": [
+          {
+            "study": "Hawthorne 1992",
+            "year": 1992,
+            "x": -0.292479,
+            "se": 0.236638
+          },
+          {
+            "study": "Jewell 1974",
+            "year": 1974,
+            "x": -0.247942,
+            "se": 0.178761
+          },
+          {
+            "study": "Sood 2000",
+            "year": 2000,
+            "x": -0.310155,
+            "se": 0.278524
+          },
+          {
+            "study": "Sood 2002",
+            "year": 2002,
+            "x": -0.859133,
+            "se": 0.485408
+          },
+          {
+            "study": "L\u00f6wenberg 2023",
+            "year": 2023,
+            "x": -0.659861,
+            "se": 0.221714
+          },
+          {
+            "study": "Mate-Jimenez 2000",
+            "year": 2000,
+            "x": -1.049822,
+            "se": 0.518699
+          },
+          {
+            "study": "Paraskeva 2000",
+            "year": 2000,
+            "x": -0.223144,
+            "se": 0.447214
+          },
+          {
+            "study": "Sakuraba 2012",
+            "year": 2012,
+            "x": -0.09531,
+            "se": 0.689752
+          },
+          {
+            "study": "Kiszka-Kanowitz 2022",
+            "year": 2022,
+            "x": -0.313149,
+            "se": 0.149178
+          },
+          {
+            "study": "Roblin 2017",
+            "year": 2017,
+            "x": -0.492477,
+            "se": 0.811843
+          }
+        ],
+        "theta": -0.375860737773536,
+        "sigma": 0.0833621253375476,
+        "tau": 6.64348895506722e-06
+      }
+    }
+  ],
+  "issues": {
+    "kHist": [
+      {
+        "label": "1",
+        "value": 0
+      },
+      {
+        "label": "2",
+        "value": 705
+      },
+      {
+        "label": "3-4",
+        "value": 852
+      },
+      {
+        "label": "5-9",
+        "value": 950
+      },
+      {
+        "label": "10-19",
+        "value": 733
+      },
+      {
+        "label": "20-49",
+        "value": 273
+      },
+      {
+        "label": "50+",
+        "value": 43
+      }
+    ],
+    "kSmallFrac": 0.705,
+    "kN": 3556,
+    "estimators": [
+      {
+        "label": "Fixed-effect",
+        "est": 0.9231,
+        "lo": 0.8623,
+        "hi": 0.9883,
+        "tau2": 0.0
+      },
+      {
+        "label": "Random (DL)",
+        "est": 0.9227,
+        "lo": 0.8584,
+        "hi": 0.9919,
+        "tau2": 0.00115
+      },
+      {
+        "label": "Random (Paule-Mandel)",
+        "est": 0.9227,
+        "lo": 0.8582,
+        "hi": 0.9921,
+        "tau2": 0.00122
+      }
+    ],
+    "egger": {
+      "intercept": 0.078,
+      "t": 0.12,
+      "p": 0.905,
+      "k": 13,
+      "note": "normal approx; Egger has low power for k<10"
+    }
+  },
   "agreement": [
     {
       "x": 0.0,

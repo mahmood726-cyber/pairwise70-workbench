@@ -234,6 +234,154 @@ def compute_density(values, n=80):
     return {"grid": [round(g, 5) for g in grid], "density": [round(d, 5) for d in dens], "n": len(vals)}
 
 
+REVIEWS = ["CD000028_pub4", "CD000219_pub5", "CD001155_pub3", "CD000478_pub5", "CD000547_pub3"]
+REVIEW_LABELS = {
+    "CD000028_pub4": "Antihypertensives in the elderly",
+    "CD000219_pub5": "Antibiotics for acute otitis media",
+    "CD001155_pub3": "Bisphosphonates / fracture prevention",
+    "CD000478_pub5": "Maintenance of remission (IBD)",
+    "CD000547_pub3": "Myomectomy / fibroid surgery",
+}
+
+
+def _points_for(df, analysis_name):
+    """Overall (no-subgroup) per-study logRR + SE for one outcome."""
+    import math
+    import re
+    sub = df[(df["Analysis.name"] == analysis_name) & df["Study"].notna()
+             & df["Mean"].notna() & df["CI.start"].notna() & df["CI.end"].notna()]
+    seen, pts = set(), []
+    for _, r in sub.iterrows():
+        m, lo, hi = float(r["Mean"]), float(r["CI.start"]), float(r["CI.end"])
+        study = str(r["Study"]).strip()
+        # one point per distinct trial (some outcomes list every study only under subgroups)
+        if not (m > 0 and lo > 0 and hi > lo) or study in seen:
+            continue
+        seen.add(study)
+        yr = r["Study.year"]
+        year = int(yr) if (yr == yr and yr is not None) else (
+            int(re.search(r"(19|20)\d{2}", study).group(0)) if re.search(r"(19|20)\d{2}", study) else None)
+        pts.append({"study": study, "year": year, "x": round(math.log(m), 6),
+                    "se": round((math.log(hi) - math.log(lo)) / (2 * 1.959964), 6)})
+    return pts
+
+
+def build_reviews(src, rda_dir):
+    """Forest of outcomes + one representative outcome's per-study points, per review."""
+    import csv as _csv
+    try:
+        import pyreadr
+    except ImportError:
+        return None
+    by_rev = {}
+    with (src / "ma4_results_pairwise70.csv").open(encoding="utf-8") as fh:
+        for row in _csv.DictReader(fh):
+            if row["effect_type"] == "logRR" and row["review_id"] in REVIEWS:
+                by_rev.setdefault(row["review_id"], []).append(row)
+    out = []
+    for rid in REVIEWS:
+        rows = by_rev.get(rid, [])
+        f = Path(rda_dir) / (rid + "_data.rda")
+        if not rows or not f.is_file():
+            continue
+        forest = [{"label": r["analysis_name"], "theta": float(r["theta"]),
+                   "sigma": float(r["sigma"]), "k": int(r["k"])} for r in rows]
+        df = next(iter(pyreadr.read_r(str(f)).values()))
+        rep_row = max(rows, key=lambda r: int(r["k"]))     # outcome with the most trials
+        pts = _points_for(df, rep_row["analysis_name"])
+        if len(pts) < 3:
+            continue
+        out.append({"id": rid, "label": REVIEW_LABELS.get(rid, rid),
+                    "forest": forest,
+                    "rep": {"name": rep_row["analysis_name"], "k": len(pts), "points": pts,
+                            "theta": float(rep_row["theta"]), "sigma": float(rep_row["sigma"]),
+                            "tau": float(rep_row["tau"])}})
+    return out or None
+
+
+def compute_estimators(points):
+    """Same data, three models: fixed-effect, DerSimonian-Laird, Paule-Mandel.
+    Shows how the 'answer' shifts with estimator choice."""
+    import math
+    yv = [p["x"] for p in points]
+    vv = [p["se"] ** 2 for p in points]
+    m = len(yv)
+
+    def re_pool(tau2):
+        ws = [1.0 / (v + tau2) for v in vv]
+        sws = sum(ws)
+        mu = sum(w * y for w, y in zip(ws, yv)) / sws
+        return mu, math.sqrt(1.0 / sws)
+    # fixed effect
+    mu_fe, se_fe = re_pool(0.0)
+    # DL
+    wf = [1.0 / v for v in vv]
+    sw = sum(wf)
+    ybar = sum(w * y for w, y in zip(wf, yv)) / sw
+    Q = sum(w * (y - ybar) ** 2 for w, y in zip(wf, yv))
+    C = sw - sum(w * w for w in wf) / sw
+    tau2_dl = max(0.0, (Q - (m - 1)) / C) if C > 0 else 0.0
+    mu_dl, se_dl = re_pool(tau2_dl)
+    # Paule-Mandel (iterate so sum wi*(yi-ybar)^2 = m-1)
+    tau2_pm = tau2_dl
+    for _ in range(100):
+        ws = [1.0 / (v + tau2_pm) for v in vv]
+        sws = sum(ws)
+        mb = sum(w * y for w, y in zip(ws, yv)) / sws
+        F = sum(w * (y - mb) ** 2 for w, y in zip(ws, yv)) - (m - 1)
+        dF = -sum((w ** 2) * (y - mb) ** 2 for w, y in zip(ws, yv))
+        if abs(dF) < 1e-12:
+            break
+        step = F / dF
+        tau2_pm = max(0.0, tau2_pm - step)
+        if abs(step) < 1e-10:
+            break
+
+    def row(label, mu, se, tau2):
+        return {"label": label, "est": round(math.exp(mu), 4),
+                "lo": round(math.exp(mu - 1.959964 * se), 4),
+                "hi": round(math.exp(mu + 1.959964 * se), 4),
+                "tau2": round(tau2, 5)}
+    return [row("Fixed-effect", mu_fe, se_fe, 0.0),
+            row("Random (DL)", mu_dl, se_dl, tau2_dl),
+            row("Random (Paule-Mandel)", *re_pool(tau2_pm), tau2_pm)]
+
+
+def compute_egger(points):
+    """Egger's regression test for small-study effects (intercept != 0)."""
+    import math
+    snd = [p["x"] / p["se"] for p in points]            # standard normal deviate
+    prec = [1.0 / p["se"] for p in points]              # precision
+    n = len(points)
+    mx = sum(prec) / n
+    my = sum(snd) / n
+    sxx = sum((x - mx) ** 2 for x in prec)
+    sxy = sum((x - mx) * (y - my) for x, y in zip(prec, snd))
+    if sxx == 0:
+        return None
+    slope = sxy / sxx
+    intercept = my - slope * mx
+    resid = [y - (intercept + slope * x) for x, y in zip(prec, snd)]
+    s2 = sum(r * r for r in resid) / (n - 2)
+    se_int = math.sqrt(s2 * (1.0 / n + mx * mx / sxx))
+    t = intercept / se_int if se_int > 0 else 0.0
+    # two-sided p via survival of |t| under t_{n-2}, small-table normal approx
+    p = math.erfc(abs(t) / math.sqrt(2))               # normal approx (k>=10)
+    return {"intercept": round(intercept, 3), "t": round(t, 2), "p": round(p, 3),
+            "k": n, "note": "normal approx; Egger has low power for k<10"}
+
+
+def _histogram(values, edges, labels):
+    """Bucket counts for renderBars. edges define right-open bins; last is open-ended."""
+    counts = [0] * len(labels)
+    for v in values:
+        for i in range(len(labels)):
+            if v < edges[i + 1]:
+                counts[i] += 1
+                break
+    return [{"label": labels[i], "value": counts[i]} for i in range(len(labels))]
+
+
 def compute_gosh(points, cap=2500):
     """GOSH: fixed-effect pooled estimate vs I^2 over every >=2-study subset."""
     import math
@@ -277,7 +425,7 @@ def main():
 
     # Forest: pooled logRR + SE for each outcome of one real review.
     # Also collect every logRR tau across the corpus sample for a heterogeneity density.
-    forest, taus = [], []
+    forest, taus, ks = [], [], []
     with res.open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             if row["effect_type"] != "logRR":
@@ -288,6 +436,10 @@ def main():
                 tau = None
             if tau is not None and tau > 1e-4:        # drop the ~6e-6 numeric-floor zeros
                 taus.append(tau)
+            try:
+                ks.append(int(row["k"]))
+            except (ValueError, KeyError):
+                pass
             if row["review_id"] == FOREST_REVIEW:
                 forest.append({
                     "label": row["analysis_name"],
@@ -329,6 +481,20 @@ def main():
     subgroup = read_subgroup(args.rda)
     bayes = compute_bayes(funnel["points"]) if funnel else None
 
+    # Multi-review set for the interactive dropdown
+    reviews = build_reviews(src, Path(args.rda))
+
+    # "Issues with Cochrane MAs" — real corpus-computed evidence
+    small_k = sum(1 for k in ks if k < 10)
+    issues = {
+        "kHist": _histogram(ks, [1, 2, 3, 5, 10, 20, 50, 10 ** 9],
+                            ["1", "2", "3-4", "5-9", "10-19", "20-49", "50+"]),
+        "kSmallFrac": round(small_k / len(ks), 3) if ks else None,
+        "kN": len(ks),
+        "estimators": compute_estimators(funnel["points"]) if funnel else None,
+        "egger": compute_egger(funnel["points"]) if funnel else None,
+    }
+
     data = {
         "forestReview": FOREST_REVIEW,
         "forest": forest,
@@ -340,6 +506,8 @@ def main():
         "tauDensity": tau_density,
         "subgroup": subgroup,
         "bayes": bayes,
+        "reviews": reviews,
+        "issues": issues,
         "agreement": agree,
         "summary": {
             "nReviews": len(agree),

@@ -116,6 +116,7 @@
     <button class="tab-btn" role="tab" id="tab-projects" data-tab="projects" aria-controls="panel-projects" aria-selected="false" tabindex="-1">Projects</button>
     <button class="tab-btn" role="tab" id="tab-analyze" data-tab="analyze" aria-controls="panel-analyze" aria-selected="false" tabindex="-1">Analyze</button>
     <button class="tab-btn" role="tab" id="tab-benchmark" data-tab="benchmark" aria-controls="panel-benchmark" aria-selected="false" tabindex="-1">Benchmark</button>
+    <button class="tab-btn" role="tab" id="tab-issues" data-tab="issues" aria-controls="panel-issues" aria-selected="false" tabindex="-1">Issues</button>
     <button class="tab-btn" role="tab" id="tab-papers" data-tab="papers" aria-controls="panel-papers" aria-selected="false" tabindex="-1">E156 Papers</button>
     <button class="tab-btn" role="tab" id="tab-reproduce" data-tab="reproduce" aria-controls="panel-reproduce" aria-selected="false" tabindex="-1">Reproduce</button>
   </nav>
@@ -166,6 +167,22 @@
         <p>You have the forest plot. You extract the per-trial numbers. You re-pool them yourself.
           One time in seven, you will not arrive where the paper stands — not because you erred, but because the
           precision was never carried in the figures you were given.</p>
+      </div>
+
+      <div class="beat">
+        <h3>Browse the corpus yourself.</h3>
+        <p>Pick any of these reviews — the forest of its outcomes and the funnel of its largest
+          outcome redraw from the real data. Hover any point for its study and numbers.</p>
+        <div class="analyze-bar">
+          <label for="reviewSelect" class="sub">Review:</label>
+          <select id="reviewSelect"></select>
+        </div>
+        <div class="fig-row">
+          <figure class="figure"><svg id="figForestX" class="chart"></svg>
+            <figcaption>Outcomes of <span id="revLabel">—</span>. <span class="src">ma4_results</span></figcaption></figure>
+          <figure class="figure"><svg id="figFunnelX" class="chart"></svg>
+            <figcaption>Funnel of "<span id="revRep">—</span>". <span class="src">Pairwise70 .rda</span></figcaption></figure>
+        </div>
       </div>
 
       <div class="beat">
@@ -303,6 +320,28 @@
         vs. <code>metafor</code>'s. Points lie on the identity line. <span class="src">Pairwise70 ma4_metafor_validation</span></figcaption></figure>
     <h3 style="font-size:15px;margin:22px 0 10px">Harnesses</h3>
     <div id="benchCards" class="grid"></div>
+  </section>
+
+  <!-- ISSUES -->
+  <section class="panel" id="panel-issues" role="tabpanel" aria-labelledby="tab-issues" tabindex="0" data-panel="issues">
+    <h2>What can go wrong in a Cochrane meta-analysis</h2>
+    <p class="lead">A working taxonomy of the ways a pooled estimate can mislead. The first three
+      panels are computed from this corpus; the rest are well-established methodological concerns,
+      each linked to the family project that probes it.</p>
+
+    <div class="fig-row">
+      <figure class="figure"><svg id="figKhist" class="chart"></svg>
+        <figcaption>Studies per meta-analysis across <span id="issKn">3,556</span> risk-ratio MAs:
+          <strong><span id="issKsmall">70%</span></strong> have k&lt;10, where DerSimonian–Laird is
+          biased and prediction intervals are unstable. <span class="src">ma4_results</span></figcaption></figure>
+      <figure class="figure"><svg id="figEstim" class="chart"></svg>
+        <figcaption>Same 13 trials, three estimators (FE / DL / Paule–Mandel): the random-effects
+          interval is wider. The "answer" depends on the model. <span class="src">recomputed</span></figcaption></figure>
+    </div>
+    <div class="tiles" id="eggerTiles" style="margin:16px 0"></div>
+
+    <h3 style="font-size:15px;margin:20px 0 10px">The broader catalogue</h3>
+    <div id="issueCards" class="grid"></div>
   </section>
 
   <!-- E156 PAPERS -->
@@ -822,8 +861,77 @@ function renderPapers(){
   }).join("");
 }
 
+/* ---- Interactive: browse reviews (forest + funnel switch) ---- */
+function renderReviewBrowse(rev){
+  if(!CK || !rev) return;
+  try{
+    const studies = rev.forest.map(r => ({
+      label:r.label, est:Math.exp(r.theta),
+      lo:Math.exp(r.theta - 1.96*r.sigma), hi:Math.exp(r.theta + 1.96*r.sigma),
+      weight:r.k, included:true
+    }));
+    CK.renderForest(document.getElementById("figForestX"), studies,
+      {log:true, null:1, measure:"RR", claim:rev.label});
+    CK.renderFunnel(document.getElementById("figFunnelX"),
+      rev.rep.points.map(p => ({x:p.x, se:p.se, label:p.study})),
+      {measure:"logRR", pooled:rev.rep.theta, claim:rev.rep.name});
+    document.getElementById("revLabel").textContent = rev.label;
+    document.getElementById("revRep").textContent = rev.rep.name;
+  }catch(err){ console.warn("review browse skipped:", err); }
+}
+function initReviewBrowse(){
+  const revs = (window.PW70_MA4 && window.PW70_MA4.reviews) || [];
+  const sel = document.getElementById("reviewSelect");
+  if(!sel || !revs.length) return;
+  sel.innerHTML = revs.map((r,i) => `<option value="${i}">${esc(r.label)}</option>`).join("");
+  sel.addEventListener("change", () => renderReviewBrowse(revs[+sel.value]));
+  renderReviewBrowse(revs[0]);
+}
+
+/* ---- Issues: what can go wrong (real + canonical) ---- */
+const ISSUES = [
+  {t:"Reproduction floor", d:"Published two-decimal precision often can't be reconstructed from the per-trial numbers a reader can extract.", ev:"14.3% of 7,545 MAs (this corpus)", link:["repro-floor-atlas","https://github.com/mahmood726-cyber/repro-floor-atlas"]},
+  {t:"Publication & small-study bias", d:"Smaller, negative trials go unpublished; the funnel turns asymmetric and the pooled effect inflates.", ev:"Egger 1997 BMJ; Sterne 2011 BMJ", link:["GWAM","https://github.com/mahmood726-cyber/gwam"]},
+  {t:"Heterogeneity hidden by one number", d:"A pooled estimate can average genuinely different effects. I² is a proportion, not a magnitude — always report τ².", ev:"Higgins 2003 BMJ; Cochrane Handbook §10", link:null},
+  {t:"Estimator choice (DL vs REML/PM)", d:"DerSimonian–Laird is biased for few studies; REML / Paule–Mandel and HKSJ change the interval and sometimes the verdict.", ev:"Veroniki 2016; IntHout 2014", link:["GRMA","https://github.com/mahmood726-cyber/grma"]},
+  {t:"Prediction intervals ignored", d:"A CI excluding the null can hide a prediction interval that includes it — the next trial may not agree.", ev:"IntHout 2016 BMJ Open", link:null},
+  {t:"Few studies (k<10)", d:"Most MAs are small: τ² is poorly estimated, the PI is undefined for k<3, and tests are underpowered.", ev:"70% of this corpus have k<10", link:null},
+  {t:"Outcome & reporting bias", d:"Pre-specified outcomes get dropped or switched between protocol and publication.", ev:"Cochrane Handbook ch.13; ORBIT", link:null},
+  {t:"Trial registration vs publication", d:"A sizeable share of registered trials never publish results, so the synthesised denominator is incomplete.", ev:"AllTrials; registry audits", link:["GWAM","https://github.com/mahmood726-cyber/gwam"]},
+  {t:"Trustworthiness / data integrity", d:"Some included RCTs carry authenticity concerns that RoB-2 and GRADE do not detect.", ev:"INSPECT-SR (orthogonal check)", link:null}
+];
+function renderIssues(){
+  const m = window.PW70_MA4, iss = m && m.issues;
+  if(iss && CK){
+    try{
+      if(iss.kHist) CK.renderBars(document.getElementById("figKhist"),
+        iss.kHist.map(b => ({label:b.label, value:b.value})), {percent:false, claim:"Studies per meta-analysis"});
+      if(iss.estimators) CK.renderForest(document.getElementById("figEstim"),
+        iss.estimators.map(r => ({label:r.label, est:r.est, lo:r.lo, hi:r.hi, weight:1, included:true})),
+        {log:true, null:1, measure:"RR", claim:"Estimator sensitivity"});
+    }catch(err){ console.warn("issue charts skipped:", err); }
+    if(iss.kSmallFrac!=null) document.getElementById("issKsmall").textContent = Math.round(iss.kSmallFrac*100)+"%";
+    if(iss.kN) document.getElementById("issKn").textContent = iss.kN.toLocaleString();
+    if(iss.egger){
+      const e = iss.egger;
+      document.getElementById("eggerTiles").innerHTML = [
+        {n:e.intercept, l:"Egger intercept"}, {n:e.t, l:"t"},
+        {n:e.p, l:"p (small-study)"}, {n:"k="+e.k, l:"trials"}
+      ].map(t => `<div class="tile"><div class="n" style="font-size:19px">${esc(String(t.n))}</div><div class="l">${esc(t.l)}</div></div>`).join("")
+        + `<p class="sub" style="grid-column:1/-1;font-size:11px;margin:6px 0 0">Egger small-study test for the 13-trial outcome — no asymmetry here; ${esc(e.note)}.</p>`;
+    }
+  }
+  document.getElementById("issueCards").innerHTML = ISSUES.map(x => {
+    const link = x.link ? `<div class="row"><a class="btn" href="${esc(x.link[1])}" target="_blank" rel="noopener">${esc(x.link[0])} ↗</a></div>` : "";
+    return `<article class="card"><h3>${esc(x.t)}</h3><p>${esc(x.d)}</p>
+      <div class="tags"><span class="tag">${esc(x.ev)}</span></div>${link}</article>`;
+  }).join("");
+}
+
 /* ---- Init ---- */
 renderStory();
+initReviewBrowse();
+renderIssues();
 renderPapers();
 renderGallery();
 buildEngineSelect();

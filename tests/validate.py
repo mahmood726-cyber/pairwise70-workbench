@@ -122,6 +122,18 @@ def main():
         ok = fp.is_file() and "SIL OPEN FONT LICENSE" in fp.read_text(encoding="utf-8", errors="replace").upper()
         check(ok, f"OFL license bundled: {ofl}")
 
+    print("== interactivity + issues tab ==")
+    check('id="reviewSelect"' in html, "review dropdown present (interactive)")
+    check('id="figForestX"' in html and 'id="figFunnelX"' in html, "browse forest+funnel slots present")
+    check('id="panel-issues"' in html, "Issues tab/panel present")
+    for fid in ("figKhist", "figEstim", "issueCards", "eggerTiles"):
+        check(f'id="{fid}"' in html, f"Issues slot {fid} present")
+    check("const ISSUES = [" in html, "issue taxonomy present")
+    # no fabricated-looking DOIs in the issues copy; canonical author-year citations only
+    iss = html.split("const ISSUES = [", 1)[1].split("];", 1)[0]
+    check("doi.org" not in iss and "arXiv" not in iss and "medRxiv" not in iss,
+          "issue citations are canonical author-year (no unverified DOIs/preprint IDs)")
+
     print("== story dashboard + e156 papers ==")
     check('data-panel="story"' in html, "Story panel present")
     check('id="panel-papers"' in html, "E156 Papers panel present")
@@ -197,6 +209,12 @@ def main():
         check('"tauDensity"' in mt and '"grid"' in mt and '"density"' in mt, "heterogeneity density present")
         check('"subgroup"' in mt and mt.count('"label":') >= 3 and "dose" in mt.lower(), "dose-response subgroup data present")
         check('"bayes"' in mt and '"crI"' in mt and '"prior"' in mt, "Bayesian posterior + CrI + prior present")
+        check('"reviews"' in mt and mt.count('"forest"') >= 1 and '"rep"' in mt, "multi-review data present")
+        check('"issues"' in mt and '"kHist"' in mt and '"estimators"' in mt and '"egger"' in mt,
+              "issues data present (kHist, estimators, egger)")
+        em = re.search(r'"kSmallFrac":\s*([0-9.]+)', mt)
+        check(em is not None and 0.4 < float(em.group(1)) < 0.95,
+              f"small-k (<10) fraction is realistic ({em.group(1) if em else '?'})")
         # the engine should match metafor closely (sanity on the real numbers)
         m = re.search(r'"maxAbsThetaDiff":\s*([0-9.eE+-]+)', mt)
         ok = m and float(m.group(1)) < 1e-2
