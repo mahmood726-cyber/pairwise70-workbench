@@ -49,7 +49,7 @@ techniques explicitly and that they are rhetorical only.
 
 ### Interactive
 
-Charts have hover tooltips (study + numbers). A **review dropdown** in the Story redraws a forest+funnel pair across four real Cochrane reviews. The **Issues** tab catalogues the known failure modes of Cochrane meta-analyses, computed from this corpus where possible.
+Charts have hover tooltips (study + numbers). A **review dropdown** in the Story redraws an entire deep-dive (forest, funnel, prediction interval, leave-one-out, cumulative, GOSH, Bayesian posterior) across four real Cochrane reviews. The **Issues** tab catalogues the known failure modes of Cochrane meta-analyses, computed from this corpus where possible.
 
 ## What's inside
 
@@ -96,8 +96,8 @@ so the two can never drift.
 ## Tests
 
 ```
-python tests/validate.py     # 115 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
-python tests/smoke.py         # 45 headless-browser checks (needs Chrome + selenium)
+python tests/validate.py     # 123 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
+python tests/smoke.py         # 46 headless-browser checks (needs Chrome + selenium)
 python tools/build_ma4_data.py   # regenerate data/ma4.js from the real Pairwise70 CSVs + .rda
 ```
 

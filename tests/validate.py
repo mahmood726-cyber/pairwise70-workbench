@@ -124,7 +124,8 @@ def main():
 
     print("== interactivity + issues tab ==")
     check('id="reviewSelect"' in html, "review dropdown present (interactive)")
-    check('id="figForestX"' in html and 'id="figFunnelX"' in html, "browse forest+funnel slots present")
+    for fid in ("figForestX", "figFunnelX", "figIntervalX", "figBayesX", "figLOOX", "figCumX", "figGOSHX"):
+        check(f'id="{fid}"' in html, f"explorer slot {fid} present (full reactive deep-dive)")
     check('id="panel-issues"' in html, "Issues tab/panel present")
     for fid in ("figKhist", "figEstim", "issueCards", "eggerTiles"):
         check(f'id="{fid}"' in html, f"Issues slot {fid} present")
@@ -198,18 +199,27 @@ def main():
         nstud = len(re.findall(r'"study"', fpts.group(1))) if fpts else 0
         check(nstud == 13, f"funnel has the real 13 studies (found {nstud})")
         check('"loo"' in mt and '"overall"' in mt, "leave-one-out data present")
-        # json.dumps escapes the U+2212 minus sign; each LOO row label starts with it
-        nloo = mt.count('\\u2212')
-        check(nloo == 13, f"leave-one-out has 13 rows (found {nloo})")
+        # scope to the FIRST (top-level, all-cause-mortality) loo block; reviews add more
+        loo0 = re.search(r'"loo":\s*\{.*?"rows":\s*\[(.*?)\]\s*\}', mt, re.S)
+        nloo = loo0.group(1).count('\\u2212') if loo0 else 0   # U+2212 minus per row label
+        check(nloo == 13, f"top-level leave-one-out has 13 rows (found {nloo})")
         gm = re.search(r'"gosh".*?"total":\s*(\d+).*?"shown":\s*(\d+)', mt, re.S)
         check(gm is not None and int(gm.group(1)) > int(gm.group(2)) and int(gm.group(2)) > 100,
               f"GOSH sampled from all subsets (total {gm.group(1) if gm else '?'}, shown {gm.group(2) if gm else '?'})")
-        check('"cumulative"' in mt and mt.count('"label": "+ ') == 13, "cumulative MA has 13 by-year rows")
+        cum0 = re.search(r'"cumulative":\s*\{.*?"rows":\s*\[(.*?)\]\s*\}', mt, re.S)
+        ncum = cum0.group(1).count('"label": "+ ') if cum0 else 0
+        check('"cumulative"' in mt and ncum == 13, f"top-level cumulative MA has 13 by-year rows (found {ncum})")
         check('"interval"' in mt and '"pi"' in mt, "prediction-interval data present")
         check('"tauDensity"' in mt and '"grid"' in mt and '"density"' in mt, "heterogeneity density present")
         check('"subgroup"' in mt and mt.count('"label":') >= 3 and "dose" in mt.lower(), "dose-response subgroup data present")
         check('"bayes"' in mt and '"crI"' in mt and '"prior"' in mt, "Bayesian posterior + CrI + prior present")
         check('"reviews"' in mt and mt.count('"forest"') >= 1 and '"rep"' in mt, "multi-review data present")
+        # each review must carry a full precomputed deep-dive
+        rv = re.search(r'"reviews":\s*\[(.*?)\]\s*,\s*"issues"', mt, re.S)
+        ndd = rv.group(1).count('"gosh"') if rv else 0
+        check(ndd >= 3, f"each review has a precomputed deep-dive (gosh blocks: {ndd})")
+        check(rv is not None and rv.group(1).count('"bayes"') == ndd and rv.group(1).count('"loo"') == ndd,
+              "every review deep-dive has loo + bayes + gosh")
         check('"issues"' in mt and '"kHist"' in mt and '"estimators"' in mt and '"egger"' in mt,
               "issues data present (kHist, estimators, egger)")
         em = re.search(r'"kSmallFrac":\s*([0-9.]+)', mt)

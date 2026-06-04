@@ -291,11 +291,18 @@ def build_reviews(src, rda_dir):
         pts = _points_for(df, rep_row["analysis_name"])
         if len(pts) < 3:
             continue
+        theta, sigma, tau, k = (float(rep_row["theta"]), float(rep_row["sigma"]),
+                                float(rep_row["tau"]), len(pts))
         out.append({"id": rid, "label": REVIEW_LABELS.get(rid, rid),
                     "forest": forest,
-                    "rep": {"name": rep_row["analysis_name"], "k": len(pts), "points": pts,
-                            "theta": float(rep_row["theta"]), "sigma": float(rep_row["sigma"]),
-                            "tau": float(rep_row["tau"])}})
+                    "rep": {"name": rep_row["analysis_name"], "k": k, "points": pts,
+                            "theta": theta, "sigma": sigma, "tau": tau},
+                    # full deep-dive precomputed per review (drives the interactive explorer)
+                    "interval": compute_interval(theta, sigma, tau, k),
+                    "loo": compute_loo(pts),
+                    "cumulative": compute_cumulative(pts),
+                    "gosh": compute_gosh(pts),
+                    "bayes": compute_bayes(pts)})
     return out or None
 
 

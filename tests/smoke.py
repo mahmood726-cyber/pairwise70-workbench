@@ -99,9 +99,14 @@ def main():
         from selenium.webdriver.support.ui import Select as _Sel
         _Sel(driver.find_element(By.ID, "reviewSelect")).select_by_index(1)
         fx1 = driver.execute_script("return document.getElementById('figForestX').childElementCount;")
-        funx = driver.execute_script("return document.getElementById('figFunnelX').querySelectorAll('circle').length;")
         expect(fx0 > 0 and fx1 > 0, f"browse forest redraws on review change ({fx0}->{fx1})")
-        expect(funx > 0, f"browse funnel has study points ({funx})")
+        # the WHOLE deep-dive redraws from the selected review
+        ex = driver.execute_script(
+            "return ['figFunnelX','figIntervalX','figBayesX','figLOOX','figCumX'].map("
+            "id=>document.getElementById(id).childElementCount);")
+        gx = driver.execute_script("return document.getElementById('figGOSHX').querySelectorAll('circle').length;")
+        expect(all(n > 0 for n in ex), f"explorer interval/bayes/LOO/cumulative redraw ({ex})")
+        expect(gx > 500, f"explorer GOSH redraws with subset cloud ({gx} points)")
 
         # Issues tab: corpus-computed charts + taxonomy
         driver.find_element(By.CSS_SELECTOR, '[data-tab="issues"]').click()

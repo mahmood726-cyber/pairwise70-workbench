@@ -171,11 +171,13 @@
 
       <div class="beat">
         <h3>Browse the corpus yourself.</h3>
-        <p>Pick any of these reviews — the forest of its outcomes and the funnel of its largest
-          outcome redraw from the real data. Hover any point for its study and numbers.</p>
+        <p>Pick any of these reviews — and the <em>entire</em> deep-dive redraws from its real data:
+          the forest of outcomes, and for its largest outcome the funnel, prediction interval,
+          leave-one-out, cumulative, GOSH, and Bayesian posterior. Hover any point for its study and numbers.</p>
         <div class="analyze-bar">
           <label for="reviewSelect" class="sub">Review:</label>
           <select id="reviewSelect"></select>
+          <span class="sub" id="revRepK"></span>
         </div>
         <div class="fig-row">
           <figure class="figure"><svg id="figForestX" class="chart"></svg>
@@ -183,6 +185,21 @@
           <figure class="figure"><svg id="figFunnelX" class="chart"></svg>
             <figcaption>Funnel of "<span id="revRep">—</span>". <span class="src">Pairwise70 .rda</span></figcaption></figure>
         </div>
+        <div class="fig-row" style="margin-top:14px">
+          <figure class="figure"><svg id="figIntervalX" class="chart"></svg>
+            <figcaption>Pooled RR with 95% CI and 95% prediction interval.</figcaption></figure>
+          <figure class="figure"><svg id="figBayesX" class="chart"></svg>
+            <figcaption>Bayesian posterior of the pooled RR; 95% CrI <span id="revCrI">—</span>.</figcaption></figure>
+        </div>
+        <div class="fig-row" style="margin-top:14px">
+          <figure class="figure"><svg id="figLOOX" class="chart"></svg>
+            <figcaption>Leave-one-out (random-effects).</figcaption></figure>
+          <figure class="figure"><svg id="figCumX" class="chart"></svg>
+            <figcaption>Cumulative by year.</figcaption></figure>
+        </div>
+        <figure class="figure" style="margin-top:14px"><svg id="figGOSHX" class="chart"></svg>
+          <figcaption>GOSH: pooled RR vs I² across <span id="revGoshShown">—</span> of
+            <span id="revGoshTotal">—</span> subsets.</figcaption></figure>
       </div>
 
       <div class="beat">
@@ -864,19 +881,40 @@ function renderPapers(){
 /* ---- Interactive: browse reviews (forest + funnel switch) ---- */
 function renderReviewBrowse(rev){
   if(!CK || !rev) return;
+  const $ = id => document.getElementById(id);
   try{
-    const studies = rev.forest.map(r => ({
+    // Forest of the review's outcomes
+    CK.renderForest($("figForestX"), rev.forest.map(r => ({
       label:r.label, est:Math.exp(r.theta),
       lo:Math.exp(r.theta - 1.96*r.sigma), hi:Math.exp(r.theta + 1.96*r.sigma),
-      weight:r.k, included:true
-    }));
-    CK.renderForest(document.getElementById("figForestX"), studies,
-      {log:true, null:1, measure:"RR", claim:rev.label});
-    CK.renderFunnel(document.getElementById("figFunnelX"),
-      rev.rep.points.map(p => ({x:p.x, se:p.se, label:p.study})),
+      weight:r.k, included:true})), {log:true, null:1, measure:"RR", claim:rev.label});
+    // Funnel of the representative outcome
+    CK.renderFunnel($("figFunnelX"), rev.rep.points.map(p => ({x:p.x, se:p.se, label:p.study})),
       {measure:"logRR", pooled:rev.rep.theta, claim:rev.rep.name});
-    document.getElementById("revLabel").textContent = rev.label;
-    document.getElementById("revRep").textContent = rev.rep.name;
+    // Prediction-interval zone
+    const iv = rev.interval;
+    CK.renderInterval($("figIntervalX"), {
+      est:iv.est, lo:iv.ci[0], hi:iv.ci[1],
+      min:Math.min(iv.pi[0], 0.8)-0.02, max:Math.max(iv.pi[1], 1.0)+0.02,
+      zones:[{from:iv.pi[0], to:iv.pi[1], label:"95% prediction interval"}],
+      refs:[{x:1, label:"no effect"}], measure:"RR", claim:rev.rep.name, estimand:"Risk ratio (RE)"});
+    // Bayesian posterior
+    CK.renderDensity($("figBayesX"), {grid:rev.bayes.grid, density:rev.bayes.density},
+      {measure:"RR (posterior)", log:true, claim:"Bayesian pooled RR"});
+    // Leave-one-out + cumulative
+    CK.renderLOO($("figLOOX"), rev.loo.rows,
+      {measure:"RR", log:true, null:1, overall:rev.loo.overall, claim:"Leave-one-out RR"});
+    CK.renderCumulative($("figCumX"), rev.cumulative.rows,
+      {measure:"RR", log:true, null:1, overall:rev.cumulative.overall, claim:"Cumulative RR by year"});
+    // GOSH
+    CK.renderGOSH($("figGOSHX"), rev.gosh.points, {measure:"RR", log:true, null:1, claim:"GOSH"});
+    // Captions
+    $("revLabel").textContent = rev.label;
+    $("revRep").textContent = rev.rep.name;
+    $("revRepK").textContent = "largest outcome: " + rev.rep.name + " (k=" + rev.rep.k + ")";
+    $("revCrI").textContent = "[" + rev.bayes.crI[0].toFixed(2) + ", " + rev.bayes.crI[1].toFixed(2) + "]";
+    $("revGoshShown").textContent = rev.gosh.shown.toLocaleString();
+    $("revGoshTotal").textContent = rev.gosh.total.toLocaleString();
   }catch(err){ console.warn("review browse skipped:", err); }
 }
 function initReviewBrowse(){
