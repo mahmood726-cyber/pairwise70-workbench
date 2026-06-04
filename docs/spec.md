@@ -43,7 +43,11 @@ re-implemented here; the hub orchestrates existing, proven engines.
 - No R/Python oracle-parity assertions in v1 (deferred; user chose in-browser bar).
 - Not necessarily single-*file* (it is a small single-*repo*: hub + vendored apps).
 
-## Known limitations
-- The vendored PairwisePro v3.0 engine loads Plotly + Google Fonts from CDN (inherited
-  from the original). The hub shell itself is fully offline; the engine's charts need
-  network. Vendoring Plotly locally is a tracked follow-up.
+## Offline (resolved)
+- Plotly v2.27.0 is vendored at `apps/vendor/plotly-2.27.0.min.js`; the engines' font
+  CDN links were replaced with locally vendored woff2 + CSS under `assets/fonts/`. Both
+  engines now load with **zero external references** (asserted by `tests/validate.py`,
+  and proven offline by `tests/smoke.py` checking `typeof Plotly`).
+- Catalog duplication removed: `projects.json` is the single source; `catalog.js` is
+  generated from it (`tests/build_catalog.py`) and loaded via a `file://`-safe script
+  tag. `validate.py` runs `--check` so the two cannot drift.

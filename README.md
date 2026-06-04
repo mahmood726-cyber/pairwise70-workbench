@@ -16,8 +16,9 @@ Just open `index.html` in a browser (no build step, no server needed):
 start index.html        # Windows
 ```
 
-For the embedded engines' charts (Plotly), an internet connection is needed; all
-hub-shell features and the statistics themselves run offline.
+**Fully offline.** Plotly and the web fonts are vendored locally (`apps/vendor/`,
+`assets/fonts/`), so the hub *and* the embedded engines — including their charts — work
+with no internet connection.
 
 ## Tabs
 
@@ -32,12 +33,15 @@ hub-shell features and the statistics themselves run offline.
 
 ```
 index.html       # the hub (fully offline; my own code)
-projects.json    # the project catalog (real metadata, no marketing)
-apps/            # vendored HTML engines, byte-identical copies of the originals
+projects.json    # the project catalog — SINGLE SOURCE OF TRUTH (real metadata, no marketing)
+catalog.js       # GENERATED from projects.json (file://-safe; do not edit by hand)
+apps/            # vendored HTML engines (originals rewired to load assets locally)
   PairwisePro-v3.0-advanced.html
   MAFI-Calculator-Complete.html
+  vendor/plotly-2.27.0.min.js   # vendored Plotly (offline charts)
+assets/fonts/    # vendored web fonts (woff2 + localized CSS)
 docs/spec.md     # scope, portfolio recon (reused vs net-new), non-goals
-tests/           # validate.py (structural) + smoke.py (headless browser)
+tests/           # validate.py + smoke.py + build_catalog.py
 ```
 
 ## Family projects shown
@@ -55,25 +59,26 @@ snippet is meant to be checked against the `pairwise70` benchmark / R oracle to 
 
 ## Adding a project
 
-Edit **both** `projects.json` (canonical data) **and** the inline `CATALOG` object in
-`index.html` (so the hub works from `file://` without fetch). `tests/validate.py`
-fails if the two drift apart.
+Edit **`projects.json` only** (the single source of truth), then regenerate the
+`file://`-safe catalog:
+
+```
+python tests/build_catalog.py     # rewrites catalog.js from projects.json
+```
+
+`tests/validate.py` runs `build_catalog.py --check` and fails if `catalog.js` is stale,
+so the two can never drift.
 
 ## Tests
 
 ```
-python tests/validate.py     # 31 structural checks
-python tests/smoke.py         # 10 headless-browser checks (needs Chrome + selenium)
+python tests/validate.py     # 39 structural checks (incl. offline + catalog-sync)
+python tests/smoke.py         # 11 headless-browser checks (needs Chrome + selenium)
 ```
 
-## Known limitations
+## License & attribution
 
-- The vendored PairwisePro v3.0 engine loads Plotly + Google Fonts from CDN (inherited
-  from the original app). Vendoring Plotly locally for a zero-network engine is a
-  tracked follow-up.
-- The catalog is duplicated (JSON + inline) for `file://` compatibility; a test guards
-  against drift.
-
-## License
-
-MIT. Embedded engines retain their original licenses from their source repos.
+MIT. Embedded engines retain their original licenses from their source repos. Vendored
+third-party assets: **Plotly.js** v2.27.0 (MIT, Plotly Inc.) under `apps/vendor/`;
+**JetBrains Mono**, **Plus Jakarta Sans**, and **Inter** web fonts (SIL Open Font
+License 1.1) under `assets/fonts/`. All are redistributable under this MIT repo.

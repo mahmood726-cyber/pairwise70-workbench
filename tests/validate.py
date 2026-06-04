@@ -45,8 +45,10 @@ def main():
     cat = json.loads(catalog.read_text(encoding="utf-8"))
 
     print("== HTML safety invariants ==")
-    # Exactly one real closing </script> tag; none leaked inside template literals.
-    check(html.count("</script>") == 1, "exactly one literal </script> (no template leakage)")
+    # Script tags must balance; any extra </script> means template-literal leakage.
+    opens = len(re.findall(r"<script[\s>]", html))
+    closes = html.count("</script>")
+    check(opens == closes, f"<script> tags balanced ({opens} open / {closes} close; no template leakage)")
     for tok in ("{{", "REPLACE_ME", "__PLACEHOLDER__", "TODO_FILL"):
         check(tok not in html, f"no unpopulated placeholder token '{tok}'")
     # No hardcoded local/absolute paths in the shipped hub.
@@ -71,12 +73,34 @@ def main():
             check(embed.is_file() and embed.stat().st_size > 0,
                   f"engine '{p['id']}' -> {p['embed']} exists and non-empty")
 
-    print("== inline CATALOG matches projects.json ==")
-    inline_ids = set(re.findall(r'\{id:"([a-z0-9-]+)",\s*name:', html))
-    check(inline_ids == json_ids,
-          f"inline hub ids == projects.json ids (inline={len(inline_ids)}, json={len(json_ids)})")
-    if inline_ids != json_ids:
-        print("    diff:", inline_ids ^ json_ids)
+    print("== single-source catalog (no inline duplication) ==")
+    check("const CATALOG = window.PW70_CATALOG" in html,
+          "hub reads catalog from generated catalog.js (no inline copy)")
+    check('<script src="catalog.js">' in html, "index.html loads catalog.js via script tag")
+    check("const CATALOG = {" not in html, "no inline CATALOG object literal remains")
+    # catalog.js must be in sync with projects.json (drift impossible).
+    # Run as a subprocess so build_catalog's stdout reassignment can't clobber ours.
+    import subprocess
+    rc = subprocess.run([sys.executable, str(ROOT / "tests" / "build_catalog.py"), "--check"],
+                        capture_output=True, text=True)
+    check(rc.returncode == 0,
+          "catalog.js is in sync with projects.json (run build_catalog.py if this fails)")
+    _ = json_ids
+
+    print("== embedded engines are fully offline (no CDN) ==")
+    for p in projects:
+        if p.get("kind") == "engine":
+            etext = (ROOT / p["embed"]).read_text(encoding="utf-8", errors="replace")
+            ext = re.findall(r'src="https?://[^"]+|href="https?://[^"]+|@import\s+url\(https?://', etext)
+            check(len(ext) == 0, f"engine '{p['id']}' has zero external CDN refs ({len(ext)} found)")
+            if ext:
+                for e in ext[:3]:
+                    print("    ", e[:90])
+    check((ROOT / "apps/vendor/plotly-2.27.0.min.js").is_file(), "Plotly vendored locally")
+    for css in ("assets/fonts/pairwisepro.css", "assets/fonts/mafi.css"):
+        fp = ROOT / css
+        ok = fp.is_file() and "https://" not in fp.read_text(encoding="utf-8")
+        check(ok, f"{css} vendored with no external URLs")
 
     print("== every project has required fields ==")
     for p in projects:

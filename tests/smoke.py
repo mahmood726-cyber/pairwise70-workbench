@@ -21,9 +21,12 @@ from selenium.webdriver.support import expected_conditions as EC
 ROOT = Path(__file__).resolve().parent.parent
 URL = (ROOT / "index.html").as_uri()
 FAILS = []
+TOTAL = 0
 
 
 def expect(cond, msg):
+    global TOTAL
+    TOTAL += 1
     print(("  [PASS] " if cond else "  [FAIL] ") + msg)
     if not cond:
         FAILS.append(msg)
@@ -76,6 +79,21 @@ def main():
         expect(driver.find_element(By.ID, "dlJson").is_enabled(), "Download JSON enabled")
         expect(driver.find_element(By.ID, "dlR").is_enabled(), "Download R enabled")
 
+        # Fix #1 proof: load the engine directly and confirm Plotly resolves from the
+        # local vendor file (no network). file:// can't reach a CDN, so if Plotly is
+        # defined it came from apps/vendor/.
+        engine_url = (ROOT / "apps" / "PairwisePro-v3.0-advanced.html").as_uri()
+        driver.get(engine_url)
+        time.sleep(1.5)
+        plotly_type = driver.execute_script("return typeof window.Plotly;")
+        expect(plotly_type in ("object", "function"),
+               f"engine loads Plotly from local vendor offline (typeof Plotly = {plotly_type})")
+        font_loaded = driver.execute_script(
+            "return Array.from(document.styleSheets).some(s => (s.href||'').includes('pairwisepro.css'));")
+        expect(bool(font_loaded), "engine loads vendored local font CSS")
+        driver.get(URL)  # back to hub for log scan
+        time.sleep(0.3)
+
         # Top-document JS errors only (ignore iframe/CDN network noise)
         sev = [l for l in driver.get_log("browser")
                if l["level"] == "SEVERE" and "index.html" in l.get("message", "")
@@ -86,7 +104,7 @@ def main():
     finally:
         driver.quit()
 
-    print(f"\n{6 + 4 - len(FAILS)}/10 smoke checks passed.")
+    print(f"\n{TOTAL - len(FAILS)}/{TOTAL} smoke checks passed.")
     if FAILS:
         print("SMOKE FAILURES:")
         for f in FAILS:
