@@ -102,6 +102,26 @@ def main():
         ok = fp.is_file() and "https://" not in fp.read_text(encoding="utf-8")
         check(ok, f"{css} vendored with no external URLs")
 
+    print("== review fixes (security / a11y / R-correctness / robustness) ==")
+    check('sandbox=' in html and "allow-scripts" in html, "engine iframe has a sandbox attribute")
+    check('role="tabpanel"' in html, "panels expose role=tabpanel (a11y)")
+    check('aria-controls=' in html, "tabs wire aria-controls (a11y)")
+    check("PW70_CATALOG missing or malformed" in html, "hub guards against catalog.js load failure")
+    # R-generation correctness (static signatures of the runtime template)
+    check("ai = ai, bi = bi, ci = ci, di = di" in html, "count escalc passes ai/bi/ci/di args")
+    check("m1i = m1i, sd1i = sd1i" in html, "continuous escalc passes m1i/sd1i/... args")
+    check('measure = "PHR"' not in html and "PHR" not in html, "no invalid escalc PHR measure")
+    check("log(dat$hr)" in html, "HR pooled via log-HR (no escalc HR measure)")
+    check("qt(0.975, pi_df)" in html, "prediction interval uses t_{k-1} (matches the comment)")
+    check("DerSimonian-Laird with k<10" in html, "small-k DL guard present")
+
+    print("== license compliance ==")
+    check((ROOT / "THIRD-PARTY-LICENSES.md").is_file(), "THIRD-PARTY-LICENSES.md present")
+    for ofl in ("OFL-JetBrainsMono.txt", "OFL-PlusJakartaSans.txt", "OFL-Inter.txt"):
+        fp = ROOT / "assets" / "fonts" / ofl
+        ok = fp.is_file() and "SIL OPEN FONT LICENSE" in fp.read_text(encoding="utf-8", errors="replace").upper()
+        check(ok, f"OFL license bundled: {ofl}")
+
     print("== every project has required fields ==")
     for p in projects:
         ok = all(k in p for k in ("id", "name", "kind", "summary", "analysisTypes", "repo"))

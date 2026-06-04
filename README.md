@@ -72,8 +72,8 @@ so the two can never drift.
 ## Tests
 
 ```
-python tests/validate.py     # 39 structural checks (incl. offline + catalog-sync)
-python tests/smoke.py         # 11 headless-browser checks (needs Chrome + selenium)
+python tests/validate.py     # 53 structural checks (offline, catalog-sync, R-correctness, a11y, licenses)
+python tests/smoke.py         # 18 headless-browser checks (needs Chrome + selenium)
 ```
 
 ## License & attribution
@@ -81,4 +81,14 @@ python tests/smoke.py         # 11 headless-browser checks (needs Chrome + selen
 MIT. Embedded engines retain their original licenses from their source repos. Vendored
 third-party assets: **Plotly.js** v2.27.0 (MIT, Plotly Inc.) under `apps/vendor/`;
 **JetBrains Mono**, **Plus Jakarta Sans**, and **Inter** web fonts (SIL Open Font
-License 1.1) under `assets/fonts/`. All are redistributable under this MIT repo.
+License 1.1) under `assets/fonts/`, with their OFL texts bundled alongside. See
+[`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md).
+
+## Notes for reviewers
+
+The Reproduce tab emits **runnable** `metafor` R: `escalc()` is called with explicit
+measure-specific arguments (`ai/bi/ci/di` or `m1i/sd1i/…`), hazard ratios are pooled via
+`log(HR)` + variance (no invalid escalc measure), the prediction interval is computed
+explicitly as `t_{k-1} · √(τ²+SE²)`, and ratio measures are back-transformed with `exp()`.
+DerSimonian-Laird at k<10 surfaces a warning. The embedded engines run in a `sandbox`ed
+iframe; the tab widget is fully keyboard-navigable (arrow/Home/End, roving tabindex).

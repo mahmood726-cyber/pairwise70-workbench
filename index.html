@@ -71,17 +71,17 @@
     <h1>Pairwise70 Workbench</h1>
     <div class="sub">One program to show &amp; run every Pairwise70-family analysis — originals untouched.</div>
   </div>
-  <nav id="tabs" role="tablist">
-    <button class="tab-btn" role="tab" data-tab="projects" aria-selected="true">Projects</button>
-    <button class="tab-btn" role="tab" data-tab="analyze" aria-selected="false">Analyze</button>
-    <button class="tab-btn" role="tab" data-tab="benchmark" aria-selected="false">Benchmark</button>
-    <button class="tab-btn" role="tab" data-tab="reproduce" aria-selected="false">Reproduce</button>
+  <nav id="tabs" role="tablist" aria-label="Workbench sections">
+    <button class="tab-btn" role="tab" id="tab-projects" data-tab="projects" aria-controls="panel-projects" aria-selected="true" tabindex="0">Projects</button>
+    <button class="tab-btn" role="tab" id="tab-analyze" data-tab="analyze" aria-controls="panel-analyze" aria-selected="false" tabindex="-1">Analyze</button>
+    <button class="tab-btn" role="tab" id="tab-benchmark" data-tab="benchmark" aria-controls="panel-benchmark" aria-selected="false" tabindex="-1">Benchmark</button>
+    <button class="tab-btn" role="tab" id="tab-reproduce" data-tab="reproduce" aria-controls="panel-reproduce" aria-selected="false" tabindex="-1">Reproduce</button>
   </nav>
 </header>
 
 <main>
   <!-- PROJECTS -->
-  <section class="panel" data-panel="projects" data-active="true">
+  <section class="panel" id="panel-projects" role="tabpanel" aria-labelledby="tab-projects" tabindex="0" data-panel="projects" data-active="true">
     <h2>Project gallery</h2>
     <p class="lead">Every Pairwise70-family project in one place. Engines open live in the
       <strong>Analyze</strong> tab; data/code repos link out. Nothing here modifies the source repos.</p>
@@ -89,7 +89,7 @@
   </section>
 
   <!-- ANALYZE -->
-  <section class="panel" data-panel="analyze">
+  <section class="panel" id="panel-analyze" role="tabpanel" aria-labelledby="tab-analyze" tabindex="0" data-panel="analyze">
     <h2>Analyze</h2>
     <p class="lead">Load any embedded engine and run a real analysis. Use the engine's own
       <em>Code</em> / <em>Validation</em> tabs to export reproducible R, then log the run under <strong>Reproduce</strong>.</p>
@@ -97,24 +97,26 @@
     <div class="analyze-bar">
       <label for="engineSelect" class="sub">Engine:</label>
       <select id="engineSelect"></select>
-      <a class="btn" id="openNewTab" href="#" target="_blank" rel="noopener">Open in new tab ↗</a>
+      <a class="btn" id="openNewTab" href="#" target="_blank" rel="noopener">Open in new tab <span aria-hidden="true">↗</span></a>
     </div>
-    <iframe id="engineFrame" title="Embedded analysis engine" src="about:blank"></iframe>
+    <iframe id="engineFrame" title="Embedded analysis engine"
+      sandbox="allow-scripts allow-same-origin allow-downloads allow-popups allow-forms allow-modals"
+      src="about:blank"></iframe>
   </section>
 
   <!-- BENCHMARK -->
-  <section class="panel" data-panel="benchmark">
+  <section class="panel" id="panel-benchmark" role="tabpanel" aria-labelledby="tab-benchmark" tabindex="0" data-panel="benchmark">
     <h2>Benchmark</h2>
     <p class="lead" id="benchLead"></p>
     <div id="benchCards" class="grid"></div>
   </section>
 
   <!-- REPRODUCE -->
-  <section class="panel" data-panel="reproduce">
+  <section class="panel" id="panel-reproduce" role="tabpanel" aria-labelledby="tab-reproduce" tabindex="0" data-panel="reproduce">
     <h2>Reproduce</h2>
-    <p class="lead">Record any analysis as a deterministic, exportable run-record: inputs +
-      model + seed + app version. Generates a JSON record and a runnable <code>metafor</code> snippet
-      so the same numbers can be regenerated offline.</p>
+    <p class="lead">Capture an analysis as an exportable manifest: inputs + model + seed +
+      app version + a digest of your pasted result. The <code>metafor</code> script regenerates the
+      pooled estimate from your own data offline; the JSON records exactly what was run.</p>
     <div class="form-grid">
       <div class="field"><label for="rProject">Project</label><select id="rProject"></select></div>
       <div class="field"><label for="rMeasure">Effect measure</label>
@@ -128,10 +130,15 @@
     </div>
     <div class="field" style="margin-bottom:14px">
       <label for="rNotes">Notes / data summary (free text)</label>
-      <textarea id="rNotes" placeholder="e.g. Cochrane CD00xxxx, outcome = all-cause mortality, k=10, paste pooled estimate + CI here..."></textarea>
+      <textarea id="rNotes" placeholder="e.g. Cochrane CD00xxxx, outcome = all-cause mortality, k=10..."></textarea>
     </div>
+    <div class="field" style="margin-bottom:14px">
+      <label for="rResult">Pooled result to record (optional, paste — e.g. OR 0.82, 95% CI 0.71–0.95)</label>
+      <textarea id="rResult" style="min-height:48px" placeholder="Paste the pooled estimate + CI you are recording. Hashed into the manifest as inputDigest."></textarea>
+    </div>
+    <div class="notice" id="reproWarn" style="display:none" role="status"></div>
     <div class="row" style="margin-bottom:16px">
-      <button class="btn primary" id="genRecord">Generate run-record</button>
+      <button class="btn primary" id="genRecord">Generate manifest</button>
       <button class="btn" id="dlJson" disabled>Download JSON</button>
       <button class="btn" id="dlR" disabled>Download R script</button>
     </div>
@@ -155,17 +162,40 @@ document.getElementById("ver").textContent = "v" + APP_VERSION;
 
 /* ---- Catalog: single source projects.json, loaded via generated catalog.js (file://-safe) ---- */
 const CATALOG = window.PW70_CATALOG;
+if(!CATALOG || !Array.isArray(CATALOG.projects)){
+  document.querySelector("main").innerHTML =
+    '<div class="notice" style="display:block">Could not load <code>catalog.js</code>. ' +
+    'Run <code>python tests/build_catalog.py</code> and make sure catalog.js sits next to index.html.</div>';
+  throw new Error("PW70_CATALOG missing or malformed");
+}
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 
-/* ---- Tabs ---- */
+/* ---- Tabs (mouse + full keyboard / ARIA) ---- */
 const tabs = document.getElementById("tabs");
-tabs.addEventListener("click", e => {
-  const b = e.target.closest(".tab-btn"); if(!b) return;
+const tabBtns = Array.from(tabs.querySelectorAll(".tab-btn"));
+function selectTab(b, focus){
+  if(!b) return;
   const name = b.dataset.tab;
-  tabs.querySelectorAll(".tab-btn").forEach(x => x.setAttribute("aria-selected", String(x===b)));
+  tabBtns.forEach(x => {
+    const on = x===b;
+    x.setAttribute("aria-selected", String(on));
+    x.tabIndex = on ? 0 : -1;       // roving tabindex
+  });
   document.querySelectorAll(".panel").forEach(p =>
     p.setAttribute("data-active", String(p.dataset.panel===name)));
+  if(focus) b.focus();
+}
+tabs.addEventListener("click", e => selectTab(e.target.closest(".tab-btn"), false));
+tabs.addEventListener("keydown", e => {
+  const i = tabBtns.indexOf(document.activeElement);
+  if(i < 0) return;
+  let j = -1;
+  if(e.key==="ArrowRight"||e.key==="ArrowDown") j = (i+1) % tabBtns.length;
+  else if(e.key==="ArrowLeft"||e.key==="ArrowUp") j = (i-1+tabBtns.length) % tabBtns.length;
+  else if(e.key==="Home") j = 0;
+  else if(e.key==="End") j = tabBtns.length-1;
+  if(j >= 0){ e.preventDefault(); selectTab(tabBtns[j], true); }
 });
 
 /* ---- Project gallery ---- */
@@ -241,12 +271,54 @@ function buildReproProjectSelect(){
 }
 
 let lastJson = "", lastR = "";
-function escalcMeasure(m){
-  // metafor escalc measure code per effect measure
-  if(m==="OR"||m==="RR"||m==="RD") return m;       // 2x2 count data
-  if(m==="SMD") return "SMD"; if(m==="MD") return "MD";
-  if(m==="HR") return "PHR"; return m;
+
+// Small synchronous string hash (deterministic, offline-safe) for the input digest.
+function cyrb53(str, seed=0){
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for(let i=0, ch; i<str.length; i++){
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
+  return (h2>>>0).toString(16).padStart(8,"0") + (h1>>>0).toString(16).padStart(8,"0");
 }
+
+// metafor data-load + effect-size block per measure. escalc needs explicit args;
+// hazard ratios have no escalc measure, so derive log-HR + variance directly.
+const RATIO = {OR:1, RR:1, HR:1};
+function esBlock(measure){
+  if(measure==="OR"||measure==="RR"||measure==="RD"){
+    return [
+      "#    Count data columns: ai, bi (events/non-events, treatment); ci, di (control).",
+      'dat <- read.csv("your_data.csv")',
+      "",
+      `es <- escalc(measure = "${measure}", ai = ai, bi = bi, ci = ci, di = di, data = dat)`
+    ].join("\n");
+  }
+  if(measure==="SMD"||measure==="MD"){
+    return [
+      "#    Continuous columns: m1i, sd1i, n1i (treatment); m2i, sd2i, n2i (control).",
+      'dat <- read.csv("your_data.csv")',
+      "",
+      `es <- escalc(measure = "${measure}", m1i = m1i, sd1i = sd1i, n1i = n1i,`,
+      "             m2i = m2i, sd2i = sd2i, n2i = n2i, data = dat)"
+    ].join("\n");
+  }
+  // HR
+  return [
+    "#    Hazard-ratio columns: hr, ci_lb, ci_ub (per-study HR + 95% CI).",
+    "#    escalc has no HR measure; derive log-HR and its variance directly.",
+    'dat <- read.csv("your_data.csv")',
+    "",
+    "es <- data.frame(",
+    "  yi = log(dat$hr),",
+    "  vi = ((log(dat$ci_ub) - log(dat$ci_lb)) / (2 * qnorm(0.975)))^2",
+    ")"
+  ].join("\n");
+}
+
 function generateRecord(){
   const projId = document.getElementById("rProject").value;
   const proj = CATALOG.projects.find(p => p.id===projId);
@@ -256,55 +328,82 @@ function generateRecord(){
   const seed = parseInt(document.getElementById("rSeed").value, 10);
   const k = parseInt(document.getElementById("rK").value, 10);
   const notes = document.getElementById("rNotes").value.trim();
+  const resultText = document.getElementById("rResult").value.trim();
   const seedSafe = Number.isFinite(seed) ? seed : 0;
   const kSafe = Number.isFinite(k) && k>0 ? k : 1;
-  // deterministic check value from seed (lets two runs confirm identical PRNG state)
+  const isRatio = !!RATIO[measure];
+  const rmaMethod = model==="FE" ? "FE" : model;
+  const methodComment = model==="FE" ? "Fixed-effect" : ("Random-effects, tau^2 = " + model);
+
+  // Methodological guards (mirrors advanced-stats rules).
+  const warnings = [];
+  if(model==="DL" && kSafe < 10)
+    warnings.push("DerSimonian-Laird with k<10 is biased; prefer REML or Paule-Mandel.");
+  if(pi && kSafe < 3)
+    warnings.push("Prediction interval is undefined for k<3 (df = k-1).");
+
+  // Digest anchors the manifest to the exact inputs you recorded.
+  const inputDigest = "cyrb53:" + cyrb53([measure, model, pi, kSafe, notes, resultText].join("␟"));
   const rng = mulberry32(seedSafe);
   let probe = 0; for(let i=0;i<kSafe;i++) probe = rng();
-  const determinismProbe = Number(probe.toFixed(10));
 
   const record = {
     schema:"pairwise70-workbench/run-record@1",
     app:"Pairwise70 Workbench", appVersion:APP_VERSION,
     generatedAt:new Date().toISOString(),
     project:{id:proj.id, name:proj.name, repo:proj.repo},
-    analysis:{effectMeasure:measure, model, predictionInterval:pi, k:kSafe},
-    reproducibility:{seed:seedSafe, prng:"mulberry32", determinismProbe},
+    analysis:{effectMeasure:measure, scale:isRatio?"log":"raw", model, predictionInterval:pi, k:kSafe},
+    reproducibility:{seed:seedSafe, prng:"mulberry32", prngProbe:Number(probe.toFixed(10)), inputDigest},
+    reportedResult:resultText || null,
+    warnings,
     notes:notes || null
   };
   lastJson = JSON.stringify(record, null, 2);
   document.getElementById("outJson").textContent = lastJson;
 
-  const methodComment = model==="FE" ? "Fixed-effect" : ("Random-effects, tau^2 = " + model);
-  const rmaMethod = model==="FE" ? "FE" : model;
-  const piLine = pi
-    ? 'predict(res)            # prediction interval: t-dist, df = k-1 (Cochrane Handbook v6.5)'
-    : '# prediction interval omitted';
+  const piBlock = pi
+    ? [
+        "# Prediction interval: t_{k-1} * sqrt(tau^2 + SE^2)  (Cochrane Handbook v6.5, sec 10.10.4.3)",
+        "pi_df <- res$k - 1",
+        "pi_se <- sqrt(res$tau2 + res$se^2)",
+        "pi_lb <- as.numeric(res$beta) - qt(0.975, pi_df) * pi_se",
+        "pi_ub <- as.numeric(res$beta) + qt(0.975, pi_df) * pi_se",
+        'cat(sprintf("95%% PI (log scale): [%.4f, %.4f]\\n", pi_lb, pi_ub))'
+      ].join("\n")
+    : "# prediction interval omitted";
+  const backTransform = isRatio
+    ? '\npredict(res, transf = exp)   # back-transform log scale to the ' + measure + ' scale'
+    : "";
+  const warnBlock = warnings.length
+    ? "\n# WARNINGS:\n" + warnings.map(w => "#   - " + w).join("\n") + "\n"
+    : "";
+
   lastR =
 `# reproduce.R  --  generated by Pairwise70 Workbench v${APP_VERSION}
 # Project: ${proj.name}
 # Effect measure: ${measure} | Model: ${methodComment} | k = ${kSafe} | seed = ${seedSafe}
 # Run-record schema: pairwise70-workbench/run-record@1
+# Tested with metafor >= 4.6 (R >= 4.2).${warnBlock}
 library(metafor)
 set.seed(${seedSafe})
 
-# 1. Load your study-level data.
-#    For count outcomes (OR/RR/RD): columns ai, bi, ci, di (events/non-events per arm).
-#    For continuous (SMD/MD):      columns m1i, sd1i, n1i, m2i, sd2i, n2i.
-dat <- read.csv("your_data.csv")
+# 1. Load data and compute effect sizes.
+${esBlock(measure)}
 
-# 2. Compute effect sizes.
-es <- escalc(measure = "${escalcMeasure(measure)}", data = dat)
-
-# 3. Pool.
+# 2. Pool${isRatio ? " (on the log scale; back-transform after)" : ""}.
 res <- rma(yi, vi, data = es, method = "${rmaMethod}")
 summary(res)
 confint(res)            # tau^2 / I^2 with Q-profile CI
-${piLine}
+${piBlock}${backTransform}
 
-# 4. Compare against the pairwise70 benchmark / R oracle to within tolerance 1e-6.
+# 3. Compare against the pairwise70 benchmark / R oracle to within tolerance 1e-6.
 `;
   document.getElementById("outR").textContent = lastR;
+
+  const warnEl = document.getElementById("reproWarn");
+  if(warnings.length){ warnEl.textContent = "⚠ " + warnings.join("  "); warnEl.style.display = "block"; }
+  else { warnEl.style.display = "none"; warnEl.textContent = ""; }
+
   document.getElementById("dlJson").disabled = false;
   document.getElementById("dlR").disabled = false;
 }

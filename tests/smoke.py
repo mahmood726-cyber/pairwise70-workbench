@@ -65,15 +65,48 @@ def main():
         expect("library(metafor)" in out_r, "metafor R script generated")
         expect("rma(yi, vi" in out_r, "R script pools with rma()")
 
-        # Determinism: same seed -> identical determinismProbe across two generations
+        # Determinism: same seed -> identical PRNG probe across two generations
         import re
+        from selenium.webdriver.support.ui import Select
         def probe():
             driver.find_element(By.ID, "genRecord").click()
             t = driver.find_element(By.ID, "outJson").text
-            m = re.search(r'"determinismProbe":\s*([0-9.]+)', t)
+            m = re.search(r'"prngProbe":\s*([0-9.]+)', t)
             return m.group(1) if m else None
         p1, p2 = probe(), probe()
         expect(p1 is not None and p1 == p2, f"seeded PRNG deterministic (probe {p1} == {p2})")
+
+        # R-correctness: OR uses escalc with explicit args
+        Select(driver.find_element(By.ID, "rMeasure")).select_by_visible_text("OR")
+        driver.find_element(By.ID, "genRecord").click()
+        r_or = driver.find_element(By.ID, "outR").text
+        expect('escalc(measure = "OR", ai = ai, bi = bi, ci = ci, di = di' in r_or,
+               "OR R script passes ai/bi/ci/di to escalc (runs)")
+        expect("qt(0.975, pi_df)" in r_or, "PI computed as t_{k-1} explicitly")
+        expect("predict(res, transf = exp)" in r_or, "ratio measure back-transformed via exp()")
+
+        # R-correctness: HR avoids the invalid PHR measure
+        Select(driver.find_element(By.ID, "rMeasure")).select_by_visible_text("HR")
+        driver.find_element(By.ID, "genRecord").click()
+        r_hr = driver.find_element(By.ID, "outR").text
+        expect("log(dat$hr)" in r_hr and "PHR" not in r_hr, "HR pooled via log-HR, not escalc PHR")
+
+        # Methodological guard: DL with small k surfaces a warning
+        Select(driver.find_element(By.ID, "rModel")).select_by_value("DL")
+        driver.find_element(By.ID, "rK").clear(); driver.find_element(By.ID, "rK").send_keys("5")
+        driver.find_element(By.ID, "genRecord").click()
+        warn = driver.find_element(By.ID, "reproWarn")
+        rec = driver.find_element(By.ID, "outJson").text
+        expect(warn.is_displayed() and "DerSimonian" in warn.text, "DL+small-k warning shown in UI")
+        expect('"warnings"' in rec and "inputDigest" in rec, "manifest records warnings + inputDigest")
+
+        # Keyboard a11y: ArrowRight moves tab selection
+        driver.execute_script(
+            "document.getElementById('tab-projects').focus();"
+            "document.getElementById('tab-projects').dispatchEvent("
+            "new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));")
+        sel_analyze = driver.find_element(By.ID, "tab-analyze").get_attribute("aria-selected")
+        expect(sel_analyze == "true", "ArrowRight key moves tab selection (a11y)")
 
         # Download buttons enabled after generation
         expect(driver.find_element(By.ID, "dlJson").is_enabled(), "Download JSON enabled")
