@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pairwise70 Workbench</title>
+<meta property="og:title" content="Pairwise70 Workbench">
+<meta property="og:description" content="One offline program to show and run every Pairwise70-family meta-analysis project.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg:#0f1419; --panel:#171d26; --panel2:#1e2632; --line:#2b3543;
+    --ink:#e7edf3; --muted:#94a3b8; --accent:#5eb0ef; --accent2:#7ee787;
+    --warn:#f0b429; --chip:#243140; --radius:12px; --space:16px;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5}
+  header{padding:18px 22px;border-bottom:1px solid var(--line);background:var(--panel);
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0;letter-spacing:.2px}
+  header .sub{color:var(--muted);font-size:13px}
+  nav{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+  .tab-btn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    padding:8px 14px;border-radius:999px;cursor:pointer;font-size:13px;font-family:var(--sans)}
+  .tab-btn[aria-selected="true"]{background:var(--accent);color:#06121f;border-color:var(--accent);font-weight:600}
+  main{padding:22px;max-width:1180px;margin:0 auto}
+  .panel{display:none}
+  .panel[data-active="true"]{display:block}
+  h2{font-size:16px;margin:0 0 6px}
+  .lead{color:var(--muted);font-size:14px;margin:0 0 18px;max-width:760px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;display:flex;flex-direction:column;gap:10px}
+  .card h3{margin:0;font-size:15px}
+  .card p{margin:0;color:var(--muted);font-size:13px}
+  .badge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;
+    background:var(--chip);color:var(--accent);border:1px solid var(--line);text-transform:uppercase;letter-spacing:.5px}
+  .badge.engine{color:var(--accent2)} .badge.dataset{color:#d2a8ff}
+  .badge.atlas{color:#f0b429} .badge.estimator{color:#79c0ff} .badge.collection{color:#ff9bb3}
+  .tags{display:flex;flex-wrap:wrap;gap:5px}
+  .tag{font-size:10px;background:var(--chip);color:var(--muted);border:1px solid var(--line);padding:1px 7px;border-radius:6px;font-family:var(--mono)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+  .btn{font-size:12px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-block;font-family:var(--sans)}
+  .btn.primary{background:var(--accent);color:#06121f;border-color:var(--accent);font-weight:600}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .notice{background:rgba(240,180,41,.1);border:1px solid var(--warn);color:#f5d98a;
+    font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px}
+  .analyze-bar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  select,input,textarea{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--sans)}
+  textarea{width:100%;min-height:80px;font-family:var(--mono);font-size:12px}
+  iframe{width:100%;height:78vh;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;color:var(--muted)}
+  pre{background:#0b0f14;border:1px solid var(--line);border-radius:10px;padding:14px;
+    overflow:auto;font-family:var(--mono);font-size:12px;color:#cdd9e5;max-height:340px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.two-col{grid-template-columns:1fr}}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:24px}
+  code{font-family:var(--mono);font-size:.9em;color:#cdd9e5}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Pairwise70 Workbench</h1>
+    <div class="sub">One program to show &amp; run every Pairwise70-family analysis — originals untouched.</div>
+  </div>
+  <nav id="tabs" role="tablist">
+    <button class="tab-btn" role="tab" data-tab="projects" aria-selected="true">Projects</button>
+    <button class="tab-btn" role="tab" data-tab="analyze" aria-selected="false">Analyze</button>
+    <button class="tab-btn" role="tab" data-tab="benchmark" aria-selected="false">Benchmark</button>
+    <button class="tab-btn" role="tab" data-tab="reproduce" aria-selected="false">Reproduce</button>
+  </nav>
+</header>
+
+<main>
+  <!-- PROJECTS -->
+  <section class="panel" data-panel="projects" data-active="true">
+    <h2>Project gallery</h2>
+    <p class="lead">Every Pairwise70-family project in one place. Engines open live in the
+      <strong>Analyze</strong> tab; data/code repos link out. Nothing here modifies the source repos.</p>
+    <div id="gallery" class="grid"></div>
+  </section>
+
+  <!-- ANALYZE -->
+  <section class="panel" data-panel="analyze">
+    <h2>Analyze</h2>
+    <p class="lead">Load any embedded engine and run a real analysis. Use the engine's own
+      <em>Code</em> / <em>Validation</em> tabs to export reproducible R, then log the run under <strong>Reproduce</strong>.</p>
+    <div class="notice" id="engine-notice"></div>
+    <div class="analyze-bar">
+      <label for="engineSelect" class="sub">Engine:</label>
+      <select id="engineSelect"></select>
+      <a class="btn" id="openNewTab" href="#" target="_blank" rel="noopener">Open in new tab ↗</a>
+    </div>
+    <iframe id="engineFrame" title="Embedded analysis engine" src="about:blank"></iframe>
+  </section>
+
+  <!-- BENCHMARK -->
+  <section class="panel" data-panel="benchmark">
+    <h2>Benchmark</h2>
+    <p class="lead" id="benchLead"></p>
+    <div id="benchCards" class="grid"></div>
+  </section>
+
+  <!-- REPRODUCE -->
+  <section class="panel" data-panel="reproduce">
+    <h2>Reproduce</h2>
+    <p class="lead">Record any analysis as a deterministic, exportable run-record: inputs +
+      model + seed + app version. Generates a JSON record and a runnable <code>metafor</code> snippet
+      so the same numbers can be regenerated offline.</p>
+    <div class="form-grid">
+      <div class="field"><label for="rProject">Project</label><select id="rProject"></select></div>
+      <div class="field"><label for="rMeasure">Effect measure</label>
+        <select id="rMeasure"><option>OR</option><option>RR</option><option>RD</option><option>SMD</option><option>MD</option><option>HR</option></select></div>
+      <div class="field"><label for="rModel">Model</label>
+        <select id="rModel"><option value="REML">Random-effects (REML)</option><option value="PM">Random-effects (Paule-Mandel)</option><option value="DL">Random-effects (DerSimonian-Laird)</option><option value="FE">Fixed-effect</option></select></div>
+      <div class="field"><label for="rPI">Prediction interval</label>
+        <select id="rPI"><option value="yes">Include (t, df=k-1)</option><option value="no">Omit</option></select></div>
+      <div class="field"><label for="rSeed">Seed</label><input id="rSeed" type="number" value="70" min="0" step="1"></div>
+      <div class="field"><label for="rK">Number of studies (k)</label><input id="rK" type="number" value="10" min="1" step="1"></div>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label for="rNotes">Notes / data summary (free text)</label>
+      <textarea id="rNotes" placeholder="e.g. Cochrane CD00xxxx, outcome = all-cause mortality, k=10, paste pooled estimate + CI here..."></textarea>
+    </div>
+    <div class="row" style="margin-bottom:16px">
+      <button class="btn primary" id="genRecord">Generate run-record</button>
+      <button class="btn" id="dlJson" disabled>Download JSON</button>
+      <button class="btn" id="dlR" disabled>Download R script</button>
+    </div>
+    <div class="two-col">
+      <div><div class="sub" style="margin-bottom:6px">run-record.json</div><pre id="outJson">—</pre></div>
+      <div><div class="sub" style="margin-bottom:6px">reproduce.R (metafor)</div><pre id="outR">—</pre></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Pairwise70 Workbench · offline hub · engines vendored verbatim from their source repos ·
+  <span id="ver"></span>
+</footer>
+
+<script>
+"use strict";
+const APP_VERSION = "1.0.0";
+document.getElementById("ver").textContent = "v" + APP_VERSION;
+
+/* ---- Catalog (inline so the hub works from file:// without fetch) ---- */
+const CATALOG = {
+  projects: [
+    {id:"pairwisepro-v3", name:"PairwisePro v3.0 (advanced)", kind:"engine",
+     embed:"apps/PairwisePro-v3.0-advanced.html",
+     repo:"https://github.com/mahmood726-cyber/truthcert-pairwisepro-v2.git", pages:null,
+     summary:"12-tab in-browser pairwise meta-analysis workbench: data import, pooled effect, heterogeneity, prediction intervals, Bayesian MA, bias/funnel, clinical decision, multi-outcome, validation, and R-code export.",
+     analysisTypes:["pooling OR/RR/SMD","heterogeneity","prediction interval","bayesian","publication bias","clinical decision","multi-outcome","tau2 estimators"],
+     online:"Charts use Plotly via CDN; statistics run offline."},
+    {id:"mafi-calculator", name:"MAFI Calculator (Fragility Index)", kind:"engine",
+     embed:"apps/MAFI-Calculator-Complete.html",
+     repo:"https://github.com/mahmood726-cyber/Pairwise70.git", pages:null,
+     summary:"Computes the Meta-Analysis Fragility Index — how many event reassignments flip a pooled significance verdict. Shipped alongside the Pairwise70 dataset (F1000 software-tool submission).",
+     analysisTypes:["fragility index","pooling OR/RR"], online:null},
+    {id:"pairwise70-dataset", name:"Pairwise70 dataset (Cochrane corpus)", kind:"dataset",
+     embed:null, repo:"https://github.com/mahmood726-cyber/Pairwise70.git", pages:null,
+     summary:"R data package: 501 systematically extracted pairwise meta-analysis datasets from Cochrane reviews (~50,000+ studies; 7,545 MAs). The shared corpus the rest of the family analyses.",
+     analysisTypes:["dataset"], online:null},
+    {id:"repro-floor-atlas", name:"Reproduction-Floor Atlas", kind:"atlas",
+     embed:null, repo:"https://github.com/mahmood726-cyber/repro-floor-atlas.git",
+     pages:"https://mahmood726-cyber.github.io/repro-floor-atlas/",
+     summary:"Measures whether Cochrane MAs publish results reproducible to claimed precision. Re-pooling at published precision yields |delta| > 0.005 in 14.3% of 7,545 MAs (Scenario B). Tier 1 / shipped, live dashboard.",
+     analysisTypes:["reproduction floor","re-pooling"], online:"Live Pages dashboard."},
+    {id:"grma", name:"GRMA — Grey Relational Meta-Analysis", kind:"estimator",
+     embed:null, repo:"https://github.com/mahmood726-cyber/grma.git", pages:null,
+     summary:"Robust pooling estimator using grey-relational similarity in (effect, log-precision) space with a Tukey bisquare redescending guard and BCa bootstrap inference. Includes a pairwise70 benchmark harness.",
+     analysisTypes:["robust pooling","bootstrap","pairwise70 benchmark"], online:null},
+    {id:"gwam", name:"GWAM — Ghost-Weighted Aggregate Meta-analysis", kind:"estimator",
+     embed:null, repo:"https://github.com/mahmood726-cyber/gwam.git", pages:null,
+     summary:"Reproducible GWAM pipeline over ClinicalTrials.gov registry data: pulls completed trials, classifies publication linkage, and weights for unpublished ('ghost') evidence. Includes a pairwise70 benchmark.",
+     analysisTypes:["ghost weighting","publication linkage","pairwise70 benchmark"], online:"Pipeline pulls CT.gov data when run."},
+    {id:"miii-786", name:"786-MIII Meta-analysis (Masroor)", kind:"collection",
+     embed:null, repo:"https://github.com/mahmood726-cyber/786-MIII-Meta-analysis.git", pages:null,
+     summary:"R/Shiny source collection: pairwise OR, pairwise SMD, and RROR / annualised-rate meta-analysis tooling.",
+     analysisTypes:["pooling OR","pooling SMD","RROR","NMA"], online:null}
+  ],
+  benchmark:{
+    name:"pairwise70 benchmark",
+    corpus:"Pairwise70 (501 reviews / 7,545 MAs)",
+    description:"Cross-engine validation harness: in-browser / Python / R estimators are compared against an R oracle (metafor/meta) over the Pairwise70 corpus.",
+    harnesses:["grma/run_pairwise70_benchmark.py","pipeline_pairwise70.R"]
+  }
+};
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+
+/* ---- Tabs ---- */
+const tabs = document.getElementById("tabs");
+tabs.addEventListener("click", e => {
+  const b = e.target.closest(".tab-btn"); if(!b) return;
+  const name = b.dataset.tab;
+  tabs.querySelectorAll(".tab-btn").forEach(x => x.setAttribute("aria-selected", String(x===b)));
+  document.querySelectorAll(".panel").forEach(p =>
+    p.setAttribute("data-active", String(p.dataset.panel===name)));
+});
+
+/* ---- Project gallery ---- */
+function renderGallery(){
+  const g = document.getElementById("gallery");
+  g.innerHTML = CATALOG.projects.map(p => {
+    const tags = p.analysisTypes.map(t => `<span class="tag">${esc(t)}</span>`).join("");
+    const buttons = [];
+    if(p.kind==="engine") buttons.push(`<button class="btn primary" data-open-engine="${esc(p.id)}">Open in Analyze ▸</button>`);
+    if(p.pages) buttons.push(`<a class="btn" href="${esc(p.pages)}" target="_blank" rel="noopener">Live dashboard ↗</a>`);
+    if(p.repo){ const web=p.repo.replace(/\.git$/,""); buttons.push(`<a class="btn" href="${esc(web)}" target="_blank" rel="noopener">Repo ↗</a>`); }
+    const online = p.online ? `<p class="sub" style="font-size:11px">⚙ ${esc(p.online)}</p>` : "";
+    return `<article class="card">
+      <div><span class="badge ${esc(p.kind)}">${esc(p.kind)}</span></div>
+      <h3>${esc(p.name)}</h3>
+      <p>${esc(p.summary)}</p>
+      <div class="tags">${tags}</div>
+      ${online}
+      <div class="row">${buttons.join("")}</div>
+    </article>`;
+  }).join("");
+  g.querySelectorAll("[data-open-engine]").forEach(btn =>
+    btn.addEventListener("click", () => openEngine(btn.getAttribute("data-open-engine"), true)));
+}
+
+/* ---- Analyze ---- */
+const engines = CATALOG.projects.filter(p => p.kind==="engine");
+function buildEngineSelect(){
+  const sel = document.getElementById("engineSelect");
+  sel.innerHTML = engines.map(e => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join("");
+  sel.addEventListener("change", () => openEngine(sel.value, false));
+}
+function openEngine(id, switchTab){
+  const e = engines.find(x => x.id===id); if(!e) return;
+  document.getElementById("engineSelect").value = id;
+  document.getElementById("engineFrame").src = e.embed;
+  document.getElementById("openNewTab").href = e.embed;
+  const notice = document.getElementById("engine-notice");
+  notice.textContent = e.online ? ("Note: " + e.online) : "Runs fully offline.";
+  if(switchTab){
+    tabs.querySelector('[data-tab="analyze"]').click();
+  }
+}
+
+/* ---- Benchmark ---- */
+function renderBenchmark(){
+  document.getElementById("benchLead").textContent = CATALOG.benchmark.description +
+    " Corpus: " + CATALOG.benchmark.corpus + ".";
+  const cards = CATALOG.benchmark.harnesses.map(h =>
+    `<article class="card"><span class="badge estimator">harness</span>
+      <h3>${esc(h.split("/").pop())}</h3>
+      <p><code>${esc(h)}</code></p>
+      <p class="sub">Validates engine output against the R oracle (metafor / meta) over the Pairwise70 corpus.</p>
+    </article>`).join("");
+  const benchEngines = CATALOG.projects.filter(p => p.analysisTypes.some(t => t.includes("benchmark")))
+    .map(p => `<article class="card"><span class="badge ${esc(p.kind)}">${esc(p.kind)}</span>
+      <h3>${esc(p.name)}</h3><p>${esc(p.summary)}</p>
+      <div class="row"><a class="btn" href="${esc(p.repo.replace(/\.git$/,''))}" target="_blank" rel="noopener">Repo ↗</a></div></article>`).join("");
+  document.getElementById("benchCards").innerHTML = cards + benchEngines;
+}
+
+/* ---- Reproduce: deterministic run-record + R export ---- */
+function mulberry32(seed){ let a = seed>>>0; return function(){
+  a |= 0; a = (a + 0x6D2B79F5) | 0;
+  let t = Math.imul(a ^ (a>>>15), 1 | a);
+  t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
+  return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+}; }
+
+function buildReproProjectSelect(){
+  const sel = document.getElementById("rProject");
+  sel.innerHTML = CATALOG.projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+}
+
+let lastJson = "", lastR = "";
+function escalcMeasure(m){
+  // metafor escalc measure code per effect measure
+  if(m==="OR"||m==="RR"||m==="RD") return m;       // 2x2 count data
+  if(m==="SMD") return "SMD"; if(m==="MD") return "MD";
+  if(m==="HR") return "PHR"; return m;
+}
+function generateRecord(){
+  const projId = document.getElementById("rProject").value;
+  const proj = CATALOG.projects.find(p => p.id===projId);
+  const measure = document.getElementById("rMeasure").value;
+  const model = document.getElementById("rModel").value;
+  const pi = document.getElementById("rPI").value==="yes";
+  const seed = parseInt(document.getElementById("rSeed").value, 10);
+  const k = parseInt(document.getElementById("rK").value, 10);
+  const notes = document.getElementById("rNotes").value.trim();
+  const seedSafe = Number.isFinite(seed) ? seed : 0;
+  const kSafe = Number.isFinite(k) && k>0 ? k : 1;
+  // deterministic check value from seed (lets two runs confirm identical PRNG state)
+  const rng = mulberry32(seedSafe);
+  let probe = 0; for(let i=0;i<kSafe;i++) probe = rng();
+  const determinismProbe = Number(probe.toFixed(10));
+
+  const record = {
+    schema:"pairwise70-workbench/run-record@1",
+    app:"Pairwise70 Workbench", appVersion:APP_VERSION,
+    generatedAt:new Date().toISOString(),
+    project:{id:proj.id, name:proj.name, repo:proj.repo},
+    analysis:{effectMeasure:measure, model, predictionInterval:pi, k:kSafe},
+    reproducibility:{seed:seedSafe, prng:"mulberry32", determinismProbe},
+    notes:notes || null
+  };
+  lastJson = JSON.stringify(record, null, 2);
+  document.getElementById("outJson").textContent = lastJson;
+
+  const methodComment = model==="FE" ? "Fixed-effect" : ("Random-effects, tau^2 = " + model);
+  const rmaMethod = model==="FE" ? "FE" : model;
+  const piLine = pi
+    ? 'predict(res)            # prediction interval: t-dist, df = k-1 (Cochrane Handbook v6.5)'
+    : '# prediction interval omitted';
+  lastR =
+`# reproduce.R  --  generated by Pairwise70 Workbench v${APP_VERSION}
+# Project: ${proj.name}
+# Effect measure: ${measure} | Model: ${methodComment} | k = ${kSafe} | seed = ${seedSafe}
+# Run-record schema: pairwise70-workbench/run-record@1
+library(metafor)
+set.seed(${seedSafe})
+
+# 1. Load your study-level data.
+#    For count outcomes (OR/RR/RD): columns ai, bi, ci, di (events/non-events per arm).
+#    For continuous (SMD/MD):      columns m1i, sd1i, n1i, m2i, sd2i, n2i.
+dat <- read.csv("your_data.csv")
+
+# 2. Compute effect sizes.
+es <- escalc(measure = "${escalcMeasure(measure)}", data = dat)
+
+# 3. Pool.
+res <- rma(yi, vi, data = es, method = "${rmaMethod}")
+summary(res)
+confint(res)            # tau^2 / I^2 with Q-profile CI
+${piLine}
+
+# 4. Compare against the pairwise70 benchmark / R oracle to within tolerance 1e-6.
+`;
+  document.getElementById("outR").textContent = lastR;
+  document.getElementById("dlJson").disabled = false;
+  document.getElementById("dlR").disabled = false;
+}
+function download(filename, text){
+  const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* ---- Init ---- */
+renderGallery();
+buildEngineSelect();
+renderBenchmark();
+buildReproProjectSelect();
+openEngine(engines[0].id, false);
+document.getElementById("genRecord").addEventListener("click", generateRecord);
+document.getElementById("dlJson").addEventListener("click", () => lastJson && download("run-record.json", lastJson));
+document.getElementById("dlR").addEventListener("click", () => lastR && download("reproduce.R", lastR));
+</script>
+</body>
+</html>

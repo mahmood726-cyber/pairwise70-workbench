@@ -1,0 +1,19 @@
+# Local progress / state (may contain local paths)
+PROGRESS.md
+sentinel-findings.md
+sentinel-findings.jsonl
+STUCK_FAILURES.md
+STUCK_FAILURES.jsonl
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Python / test cruft
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
