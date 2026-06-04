@@ -162,7 +162,10 @@ def main():
     print("== real-data charts (forest + benchmark agreement) ==")
     check('<script src="data/ma4.js">' in html, "hub loads data/ma4.js")
     check('id="figForest"' in html, "Story forest-plot slot present")
+    check('id="figFunnel"' in html, "Story funnel-plot slot present")
+    check('id="figMatrix"' in html, "Story capability-matrix slot present")
     check('id="figBench"' in html, "Benchmark agreement-scatter slot present")
+    check("renderCapabilityMatrix" in html, "capability matrix derived from catalog")
     md = ROOT / "data" / "ma4.js"
     check(md.is_file(), "data/ma4.js present (generated from real CSVs)")
     if md.is_file():
@@ -170,6 +173,11 @@ def main():
         check("window.PW70_MA4" in mt, "ma4.js defines window.PW70_MA4")
         check('"forestReview": "CD000028_pub4"' in mt, "forest uses a real review id")
         check('"agreement"' in mt and '"maxAbsThetaDiff"' in mt, "benchmark agreement data present")
+        check('"funnel"' in mt and '"points"' in mt, "funnel per-study data present")
+        # the funnel must hold the real 13 studies of the all-cause-mortality analysis
+        fpts = re.search(r'"funnel".*?"points":\s*\[(.*?)\]\s*\}', mt, re.S)
+        nstud = len(re.findall(r'"study"', fpts.group(1))) if fpts else 0
+        check(nstud == 13, f"funnel has the real 13 studies (found {nstud})")
         # the engine should match metafor closely (sanity on the real numbers)
         m = re.search(r'"maxAbsThetaDiff":\s*([0-9.eE+-]+)', mt)
         ok = m and float(m.group(1)) < 1e-2

@@ -174,6 +174,8 @@
           <figure class="figure"><svg id="figTags" class="chart"></svg>
             <figcaption>Most common analysis types across the family. <span class="src">catalog</span></figcaption></figure>
         </div>
+        <figure class="figure" style="margin-top:16px"><svg id="figMatrix" class="chart"></svg>
+          <figcaption>Capability matrix — which kind of analysis each project supports. <span class="src">catalog</span></figcaption></figure>
       </div>
 
       <div class="beat">
@@ -184,6 +186,16 @@
         <figure class="figure"><svg id="figForest" class="chart"></svg>
           <figcaption>Pooled risk ratios, review <span id="forestRev">CD000028_pub4</span>.
             <span class="src">Pairwise70 ma4_results</span></figcaption></figure>
+      </div>
+
+      <div class="beat">
+        <h3>And inside one outcome.</h3>
+        <p>Zoom into the first row — all-cause mortality. Behind that single pooled diamond sit
+          thirteen real trials, each a point in the funnel: the precise ones near the top, the small
+          ones fanning out below. This is the raw material the reproduction floor is measured against.</p>
+        <figure class="figure"><svg id="figFunnel" class="chart"></svg>
+          <figcaption>Funnel of the 13 trials in "All-cause mortality" — per-study logRR vs. standard error.
+            <span class="src">Pairwise70 CD000028_pub4 .rda</span></figcaption></figure>
       </div>
 
       <div class="beat ring-close">
@@ -613,7 +625,44 @@ function renderStory(){
       const rev = document.getElementById("forestRev");
       if(rev) rev.textContent = ma4.forestReview;
     }
+    // Real funnel: per-study logRR vs SE for one outcome
+    if(ma4 && ma4.funnel && Array.isArray(ma4.funnel.points)){
+      CK.renderFunnel(document.getElementById("figFunnel"),
+        ma4.funnel.points.map(p => ({x:p.x, se:p.se, label:p.study})),
+        {measure:"logRR", pooled:ma4.funnel.pooled, claim:"Funnel · all-cause mortality"});
+    }
+    // Capability matrix from the catalog (real, derived)
+    renderCapabilityMatrix();
   }catch(err){ console.warn("chart render skipped:", err); }
+}
+
+/* Capability matrix: which analysis each project supports (derived from catalog tags) */
+function renderCapabilityMatrix(){
+  if(!CK) return;
+  const caps = [
+    {col:"Pool",  test:t => t.includes("pooling")},
+    {col:"Het",   test:t => t.includes("heterogeneity") || t.includes("tau2")},
+    {col:"Pred.int", test:t => t.includes("prediction")},
+    {col:"Bias",  test:t => t.includes("bias")},
+    {col:"Bayes", test:t => t.includes("bayesian")},
+    {col:"Fragility", test:t => t.includes("fragility")},
+    {col:"Reprod", test:t => t.includes("reproduction") || t.includes("re-pooling")},
+    {col:"Robust", test:t => t.includes("robust") || t.includes("ghost") || t.includes("grey")}
+  ];
+  const rows = CATALOG.projects.map(p => ({
+    label: p.name.split(" (")[0].split(" — ")[0].slice(0, 22),
+    cells: caps.map(c => p.analysisTypes.some(c.test) ? "yes" : "no")
+  }));
+  const data = {
+    cols: caps.map(c => c.col),
+    rows,
+    levels: {
+      yes: {color:"#009E73", symbol:"●", label:"supported"},
+      no:  {color:"#e7e9ec", symbol:"·", label:"—"}
+    }
+  };
+  try{ CK.renderTrafficLight(document.getElementById("figMatrix"), data); }
+  catch(err){ console.warn("matrix skipped:", err); }
 }
 
 /* ---- Benchmark: real engine-vs-metafor agreement ---- */

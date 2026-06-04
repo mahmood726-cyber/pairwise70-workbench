@@ -87,15 +87,23 @@ so the two can never drift.
 ## Tests
 
 ```
-python tests/validate.py     # 83 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
-python tests/smoke.py         # 29 headless-browser checks (needs Chrome + selenium)
-python tools/build_ma4_data.py   # regenerate data/ma4.js from the real Pairwise70 CSVs
+python tests/validate.py     # 88 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
+python tests/smoke.py         # 31 headless-browser checks (needs Chrome + selenium)
+python tools/build_ma4_data.py   # regenerate data/ma4.js from the real Pairwise70 CSVs + .rda
 ```
 
-Chart types now in use (all real data, offline via the chart-kit): **gauge** (reproduction
-floor), **bars** (by-outcome, family-by-kind, analysis-type frequency), **stat tiles**,
-**forest plot** (six pooled risk ratios of a real Cochrane review, metafor-validated), and a
-**benchmark agreement scatter** (engine vs `metafor` across 100 reviews).
+Chart types now in use (all real data, offline via the chart-kit):
+- **gauge** — reproduction floor (14.3%)
+- **bars** — by-outcome, family-by-kind, analysis-type frequency
+- **stat tiles** — corpus scale + benchmark agreement summary
+- **forest plot** — six pooled risk ratios of a real Cochrane review (`CD000028_pub4`), metafor-validated
+- **funnel plot** — the 13 trials inside its all-cause-mortality outcome (per-study logRR vs SE)
+- **capability matrix** (traffic-light) — which analysis each project supports, derived from the catalog
+- **agreement scatter** — engine vs `metafor` across 100 reviews
+
+The forest/funnel/benchmark numbers come from `Pairwise70`'s `ma4_*.csv` and `*_data.rda`
+(read via `pyreadr`, no R needed) by `tools/build_ma4_data.py`, which fails closed if the
+source files are missing. The shipped `data/ma4.js` holds numbers only.
 
 ## License & attribution
 

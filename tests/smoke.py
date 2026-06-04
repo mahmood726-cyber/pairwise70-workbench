@@ -68,6 +68,10 @@ def main():
         # Real forest plot drew on the Story tab
         forest_kids = driver.execute_script("return document.getElementById('figForest').childElementCount;")
         expect(forest_kids > 0, f"ChartKit drew the real forest plot ({forest_kids} nodes)")
+        funnel_kids = driver.execute_script("return document.getElementById('figFunnel').childElementCount;")
+        expect(funnel_kids > 0, f"ChartKit drew the real funnel plot ({funnel_kids} nodes)")
+        matrix_kids = driver.execute_script("return document.getElementById('figMatrix').childElementCount;")
+        expect(matrix_kids > 0, f"ChartKit drew the capability matrix ({matrix_kids} nodes)")
 
         # Benchmark tab: agreement scatter + validation tiles from real metafor data
         driver.find_element(By.CSS_SELECTOR, '[data-tab="benchmark"]').click()
