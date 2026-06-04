@@ -1,0 +1,4 @@
+# Keep vendored third-party assets byte-stable (no EOL normalization)
+apps/vendor/** -text
+assets/fonts/*.woff2 binary
+assets/fonts/*.css -text
