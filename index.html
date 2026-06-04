@@ -169,6 +169,16 @@
       </div>
 
       <div class="beat">
+        <h3>And it generalises.</h3>
+        <p>The same machinery reads any review. Here is a different one entirely — unopposed
+          estrogen and endometrial hyperplasia — split by dose. Every stratum shows sharply raised
+          risk, a dose-response pattern a single pooled number would have flattened.</p>
+        <figure class="figure"><svg id="figSubgroup" class="chart"></svg>
+          <figcaption>Subgroup forest by estrogen dose, <span id="subgroupRev">CD000402_pub5</span>.
+            <span class="src">Pairwise70 .rda</span></figcaption></figure>
+      </div>
+
+      <div class="beat">
         <h3>So the family was built.</h3>
         <p>Seven instruments around one bench: the corpus that holds the evidence, the atlas that measured the floor,
           the engines that pool and stress-test, the robust estimators that argue with the mean.</p>
@@ -205,6 +215,17 @@
             <figcaption>Pooled RR with its 95% CI and — wider — its 95% prediction interval, which
               crosses 1. <span class="src">t-interval, df=k−1</span></figcaption></figure>
         </div>
+      </div>
+
+      <div class="beat">
+        <h3>A second opinion.</h3>
+        <p>Ask the same question in Bayesian terms — a random-effects model with a weakly
+          informative prior on between-study spread — and the posterior tells the same story: a
+          credible interval for the pooled risk ratio that, like the prediction interval, includes 1.</p>
+        <figure class="figure"><svg id="figBayes" class="chart"></svg>
+          <figcaption>Posterior of the pooled RR (grid approximation). 95% CrI
+            <span id="bayesCrI">[0.84, 1.01]</span>; prior τ ~ Half-Normal(0, 0.5).
+            <span class="src">recomputed from the 13 trials</span></figcaption></figure>
       </div>
 
       <div class="beat">
@@ -695,6 +716,21 @@ function renderStory(){
         {measure:"τ (REML)", claim:"Heterogeneity across the corpus"});
       const tn = document.getElementById("tauN");
       if(tn) tn.textContent = ma4.tauDensity.n.toLocaleString();
+    }
+    // Bayesian posterior of the pooled RR (grid approximation)
+    if(ma4 && ma4.bayes && Array.isArray(ma4.bayes.grid)){
+      CK.renderDensity(document.getElementById("figBayes"),
+        {grid:ma4.bayes.grid, density:ma4.bayes.density},
+        {measure:"RR (posterior)", log:true, claim:"Bayesian pooled RR"});
+      const cr = document.getElementById("bayesCrI");
+      if(cr) cr.textContent = "[" + ma4.bayes.crI[0].toFixed(2) + ", " + ma4.bayes.crI[1].toFixed(2) + "]";
+    }
+    // Real dose-response subgroup forest (different review)
+    if(ma4 && ma4.subgroup && Array.isArray(ma4.subgroup.groups)){
+      CK.renderSubgroup(document.getElementById("figSubgroup"), ma4.subgroup.groups,
+        {measure:"RR", log:true, null:1, claim:"Endometrial hyperplasia by estrogen dose"});
+      const sr = document.getElementById("subgroupRev");
+      if(sr) sr.textContent = ma4.subgroup.review;
     }
     // Capability matrix from the catalog (real, derived)
     renderCapabilityMatrix();

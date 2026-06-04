@@ -89,8 +89,8 @@ so the two can never drift.
 ## Tests
 
 ```
-python tests/validate.py     # 99 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
-python tests/smoke.py         # 36 headless-browser checks (needs Chrome + selenium)
+python tests/validate.py     # 103 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
+python tests/smoke.py         # 38 headless-browser checks (needs Chrome + selenium)
 python tools/build_ma4_data.py   # regenerate data/ma4.js from the real Pairwise70 CSVs + .rda
 ```
 
@@ -104,6 +104,8 @@ Chart types now in use (all real data, offline via the chart-kit):
 - **leave-one-out** — random-effects re-pool dropping each of the 13 trials
 - **cumulative** — random-effects re-pool entering the 13 trials by year
 - **GOSH** — pooled RR vs I² across 2,500 of the 8,178 ≥2-trial subsets
+- **Bayesian posterior** — pooled RR via grid approximation (flat μ, Half-Normal(0,0.5) τ); 95% CrI
+- **subgroup forest** — dose-response (estrogen → endometrial hyperplasia, `CD000402_pub5`), a different review
 - **heterogeneity density** — τ across 1,168 risk-ratio meta-analyses (Gaussian KDE)
 - **capability matrix** (traffic-light) — which analysis each project supports, derived from the catalog
 - **agreement scatter** — engine vs `metafor` across 100 reviews

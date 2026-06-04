@@ -26,6 +26,85 @@ DEFAULT_SRC = Path(r"C:\Projects\Pairwise70\analysis")
 DEFAULT_RDA = Path(r"C:\Projects\Pairwise70\data")
 FOREST_REVIEW = "CD000028_pub4"      # antihypertensive review: 6 logRR outcomes, all REML-validated
 FUNNEL_NAME = "All-cause mortality"  # one outcome; Analysis.group 1 = overall (k=13), groups 2-3 = age subgroups
+SUBGROUP_REVIEW = "CD000402_pub5"    # unopposed-estrogen review: clean dose-response subgroups
+SUBGROUP_NAME = "Endometrial hyperplasia at 1 year"
+SUBGROUP_LEVELS = ["Low-dose estrogen", "Moderate-dose estrogen", "High-dose estrogen"]
+
+
+def read_subgroup(rda_dir):
+    """Real dose-response subgroup forest: pool each estrogen-dose stratum (RR)."""
+    try:
+        import math
+        import pyreadr
+    except ImportError:
+        return None
+    f = Path(rda_dir) / (SUBGROUP_REVIEW + "_data.rda")
+    if not f.is_file():
+        return None
+    a = next(iter(pyreadr.read_r(str(f)).values()))
+    a = a[a["Analysis.name"] == SUBGROUP_NAME]
+    groups = []
+    for s in SUBGROUP_LEVELS:
+        r = a[(a["Subgroup"] == s) & a["Study"].notna() & a["Mean"].notna()
+              & a["CI.start"].notna() & a["CI.end"].notna()]
+        yv, vv = [], []
+        for _, row in r.iterrows():
+            m, lo, hi = float(row["Mean"]), float(row["CI.start"]), float(row["CI.end"])
+            if m > 0 and lo > 0 and hi > lo:
+                yv.append(math.log(m))
+                vv.append(((math.log(hi) - math.log(lo)) / (2 * 1.959964)) ** 2)
+        if len(yv) < 2:
+            continue
+        mu, se, _, _ = _pool(yv, vv)
+        groups.append({"label": s.replace(" estrogen", ""), "k": len(yv),
+                       "est": round(math.exp(mu), 3),
+                       "lo": round(math.exp(mu - 1.959964 * se), 3),
+                       "hi": round(math.exp(mu + 1.959964 * se), 3)})
+    if len(groups) < 2:
+        return None
+    return {"review": SUBGROUP_REVIEW, "analysis": SUBGROUP_NAME, "measure": "RR", "groups": groups}
+
+
+def compute_bayes(points, prior_tau_sd=0.5):
+    """Bayesian random-effects pool via 2-D grid approximation over (mu, tau).
+    Flat prior on mu, Half-Normal(0, prior_tau_sd) on tau. Returns posterior density
+    of the pooled RR + 95% credible interval. Deterministic; documented prior."""
+    import math
+    yv = [p["x"] for p in points]
+    vv = [p["se"] ** 2 for p in points]
+    mus = [-0.45 + 0.9 * i / 199 for i in range(200)]          # logRR support
+    taus = [0.5 * j / 79 for j in range(80)]                   # tau in [0, 0.5]
+    grid = [[0.0] * len(taus) for _ in range(len(mus))]
+    for ti, tau in enumerate(taus):
+        lp_tau = -(tau * tau) / (2 * prior_tau_sd * prior_tau_sd)   # half-normal (tau >= 0)
+        s2 = [v + tau * tau for v in vv]
+        const = lp_tau - 0.5 * sum(math.log(2 * math.pi * s) for s in s2)
+        for mi, mu in enumerate(mus):
+            grid[mi][ti] = const - 0.5 * sum((y - mu) ** 2 / s for y, s in zip(yv, s2))
+    mx = max(max(row) for row in grid)
+    Z = 0.0
+    for mi in range(len(mus)):
+        for ti in range(len(taus)):
+            grid[mi][ti] = math.exp(grid[mi][ti] - mx)
+            Z += grid[mi][ti]
+    pmu = [sum(grid[mi]) / Z for mi in range(len(mus))]         # marginal posterior of mu
+    cum, c = [], 0.0
+    for w in pmu:
+        c += w
+        cum.append(c)
+    def q(p):
+        for mi in range(len(mus)):
+            if cum[mi] >= p:
+                return mus[mi]
+        return mus[-1]
+    mmean = sum(m * w for m, w in zip(mus, pmu))
+    dmu = mus[1] - mus[0]
+    rr = [math.exp(m) for m in mus]
+    dens = [pmu[mi] / dmu / rr[mi] for mi in range(len(mus))]   # density in RR space (Jacobian)
+    return {"grid": [round(r, 4) for r in rr], "density": [round(d, 4) for d in dens],
+            "est": round(math.exp(mmean), 4),
+            "crI": [round(math.exp(q(0.025)), 4), round(math.exp(q(0.975)), 4)],
+            "prior": "tau ~ Half-Normal(0, 0.5), flat mu"}
 
 
 def read_funnel(rda_dir, pooled_logrr):
@@ -246,6 +325,10 @@ def main():
     # Heterogeneity density across the logRR corpus sample
     tau_density = compute_density(taus)
 
+    # Real dose-response subgroup forest (different review) + Bayesian posterior
+    subgroup = read_subgroup(args.rda)
+    bayes = compute_bayes(funnel["points"]) if funnel else None
+
     data = {
         "forestReview": FOREST_REVIEW,
         "forest": forest,
@@ -255,6 +338,8 @@ def main():
         "cumulative": cumulative,
         "interval": interval,
         "tauDensity": tau_density,
+        "subgroup": subgroup,
+        "bayes": bayes,
         "agreement": agree,
         "summary": {
             "nReviews": len(agree),

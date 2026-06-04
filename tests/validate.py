@@ -168,6 +168,8 @@ def main():
     check('id="figCumulative"' in html, "Story cumulative-MA slot present")
     check('id="figInterval"' in html, "Story prediction-interval slot present")
     check('id="figTau"' in html, "Story heterogeneity-density slot present")
+    check('id="figBayes"' in html, "Story Bayesian-posterior slot present")
+    check('id="figSubgroup"' in html, "Story subgroup-forest slot present")
     check('id="figMatrix"' in html, "Story capability-matrix slot present")
     check('id="figBench"' in html, "Benchmark agreement-scatter slot present")
     check("renderCapabilityMatrix" in html, "capability matrix derived from catalog")
@@ -193,6 +195,8 @@ def main():
         check('"cumulative"' in mt and mt.count('"label": "+ ') == 13, "cumulative MA has 13 by-year rows")
         check('"interval"' in mt and '"pi"' in mt, "prediction-interval data present")
         check('"tauDensity"' in mt and '"grid"' in mt and '"density"' in mt, "heterogeneity density present")
+        check('"subgroup"' in mt and mt.count('"label":') >= 3 and "dose" in mt.lower(), "dose-response subgroup data present")
+        check('"bayes"' in mt and '"crI"' in mt and '"prior"' in mt, "Bayesian posterior + CrI + prior present")
         # the engine should match metafor closely (sanity on the real numbers)
         m = re.search(r'"maxAbsThetaDiff":\s*([0-9.eE+-]+)', mt)
         ok = m and float(m.group(1)) < 1e-2
