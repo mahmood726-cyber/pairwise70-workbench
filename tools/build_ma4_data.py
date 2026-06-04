@@ -41,6 +41,7 @@ def read_funnel(rda_dir, pooled_logrr):
     if not f.is_file():
         print(f"note: {f} missing; skipping funnel")
         return None
+    import re
     df = next(iter(pyreadr.read_r(str(f)).values()))
     # group 1 = the overall pooled set (k=13); groups 2-3 are mutually-exclusive age subgroups
     sub = df[(df["Analysis.name"] == FUNNEL_NAME) & (df["Analysis.group"] == 1)
@@ -53,7 +54,14 @@ def read_funnel(rda_dir, pooled_logrr):
             continue
         x = math.log(m)                                  # per-study logRR
         se = (math.log(hi) - math.log(lo)) / (2 * 1.959964)
-        pts.append({"study": str(r["Study"]).strip(), "x": round(x, 6), "se": round(se, 6)})
+        study = str(r["Study"]).strip()
+        yr = r["Study.year"]
+        if yr == yr and yr is not None:                  # not NaN
+            year = int(yr)
+        else:
+            mt = re.search(r"(19|20)\d{2}", study)        # fall back to the year in the name
+            year = int(mt.group(0)) if mt else None
+        pts.append({"study": study, "year": year, "x": round(x, 6), "se": round(se, 6)})
     if not pts:
         return None
     return {"analysis": "All-cause mortality", "measure": "logRR",
@@ -97,6 +105,56 @@ def compute_loo(points):
     return {"overall": round(math.exp(mu0), 4), "rows": rows}
 
 
+def compute_cumulative(points):
+    """Cumulative random-effects meta-analysis, studies entered by year."""
+    import math
+    ordered = sorted([p for p in points if p.get("year")], key=lambda p: p["year"])
+    rows = []
+    for i in range(len(ordered)):
+        yv = [p["x"] for p in ordered[:i + 1]]
+        vv = [p["se"] ** 2 for p in ordered[:i + 1]]
+        mu, se, _, _ = _pool(yv, vv)
+        p = ordered[i]
+        rows.append({"label": "+ " + p["study"],
+                     "est": round(math.exp(mu), 4),
+                     "lo": round(math.exp(mu - 1.959964 * se), 4),
+                     "hi": round(math.exp(mu + 1.959964 * se), 4)})
+    final = rows[-1]["est"] if rows else None
+    return {"overall": final, "rows": rows}
+
+
+def compute_interval(theta, sigma, tau, k):
+    """Pooled estimate with 95% CI and 95% prediction interval, back-transformed to RR.
+    PI uses t_{k-1} * sqrt(tau^2 + SE^2) (Cochrane Handbook v6.5)."""
+    import math
+    # two-sided t critical value, df = k-1 (small-table lookup; df here is 12)
+    tcrit = {1:12.706,2:4.303,3:3.182,4:2.776,5:2.571,6:2.447,7:2.365,8:2.306,9:2.262,
+             10:2.228,11:2.201,12:2.179,13:2.160,14:2.145,15:2.131,20:2.086,30:2.042}.get(k-1, 1.96)
+    ci = (math.exp(theta - 1.959964 * sigma), math.exp(theta + 1.959964 * sigma))
+    pw = tcrit * math.sqrt(tau ** 2 + sigma ** 2)
+    pi = (math.exp(theta - pw), math.exp(theta + pw))
+    return {"est": round(math.exp(theta), 4), "ci": [round(ci[0], 4), round(ci[1], 4)],
+            "pi": [round(pi[0], 4), round(pi[1], 4)], "k": k, "measure": "RR"}
+
+
+def compute_density(values, n=80):
+    """Gaussian-KDE of a list of values -> grid + density arrays for renderDensity."""
+    import math
+    vals = [v for v in values if v is not None and v == v]
+    if len(vals) < 3:
+        return None
+    lo, hi = min(vals), max(vals)
+    if hi <= lo:
+        hi = lo + 1e-6
+    mean = sum(vals) / len(vals)
+    sd = (sum((v - mean) ** 2 for v in vals) / len(vals)) ** 0.5 or (hi - lo) / 6 or 1e-6
+    bw = 1.06 * sd * len(vals) ** (-0.2) or (hi - lo) / 20
+    grid = [lo + (hi - lo) * i / (n - 1) for i in range(n)]
+    dens = [sum(math.exp(-0.5 * ((g - v) / bw) ** 2) for v in vals) / (len(vals) * bw * math.sqrt(2 * math.pi))
+            for g in grid]
+    return {"grid": [round(g, 5) for g in grid], "density": [round(d, 5) for d in dens], "n": len(vals)}
+
+
 def compute_gosh(points, cap=2500):
     """GOSH: fixed-effect pooled estimate vs I^2 over every >=2-study subset."""
     import math
@@ -138,15 +196,25 @@ def main():
                   f"Pass --src <dir> pointing at the Pairwise70 analysis folder.")
             sys.exit(2)
 
-    # Forest: pooled logRR + SE for each outcome of one real review
-    forest = []
+    # Forest: pooled logRR + SE for each outcome of one real review.
+    # Also collect every logRR tau across the corpus sample for a heterogeneity density.
+    forest, taus = [], []
     with res.open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
-            if row["review_id"] == FOREST_REVIEW and row["effect_type"] == "logRR":
+            if row["effect_type"] != "logRR":
+                continue
+            try:
+                tau = float(row["tau"])
+            except (ValueError, KeyError):
+                tau = None
+            if tau is not None and tau > 1e-4:        # drop the ~6e-6 numeric-floor zeros
+                taus.append(tau)
+            if row["review_id"] == FOREST_REVIEW:
                 forest.append({
                     "label": row["analysis_name"],
-                    "theta": float(row["theta"]),   # logRR
-                    "sigma": float(row["sigma"]),    # SE(logRR)
+                    "theta": float(row["theta"]),     # logRR
+                    "sigma": float(row["sigma"]),      # SE(logRR)
+                    "tau": tau if tau is not None else 0.0,
                     "k": int(row["k"]),
                 })
 
@@ -166,9 +234,17 @@ def main():
     pooled1 = next((r["theta"] for r in forest if r["label"] == "All-cause mortality"), 0.0)
     funnel = read_funnel(args.rda, pooled1)
 
-    # Leave-one-out + GOSH from the real 13 per-study points (same outcome as the funnel)
+    # Leave-one-out + GOSH + cumulative from the real 13 per-study points
     loo = compute_loo(funnel["points"]) if funnel else None
     gosh = compute_gosh(funnel["points"]) if funnel else None
+    cumulative = compute_cumulative(funnel["points"]) if funnel else None
+
+    # Prediction interval for the all-cause-mortality outcome (real theta/sigma/tau/k)
+    a1 = next((r for r in forest if r["label"] == "All-cause mortality"), None)
+    interval = compute_interval(a1["theta"], a1["sigma"], a1["tau"], a1["k"]) if a1 else None
+
+    # Heterogeneity density across the logRR corpus sample
+    tau_density = compute_density(taus)
 
     data = {
         "forestReview": FOREST_REVIEW,
@@ -176,6 +252,9 @@ def main():
         "funnel": funnel,
         "loo": loo,
         "gosh": gosh,
+        "cumulative": cumulative,
+        "interval": interval,
+        "tauDensity": tau_density,
         "agreement": agree,
         "summary": {
             "nReviews": len(agree),

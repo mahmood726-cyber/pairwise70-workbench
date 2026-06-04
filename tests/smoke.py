@@ -74,6 +74,10 @@ def main():
         expect(loo_kids > 0, f"ChartKit drew the leave-one-out forest ({loo_kids} nodes)")
         gosh_pts = driver.execute_script("return document.getElementById('figGOSH').querySelectorAll('circle').length;")
         expect(gosh_pts > 500, f"ChartKit drew the GOSH cloud ({gosh_pts} subset points)")
+        for fid, name in (("figCumulative","cumulative MA"), ("figInterval","prediction interval"),
+                          ("figTau","heterogeneity density")):
+            kids = driver.execute_script(f"return document.getElementById('{fid}').childElementCount;")
+            expect(kids > 0, f"ChartKit drew the {name} ({kids} nodes)")
         matrix_kids = driver.execute_script("return document.getElementById('figMatrix').childElementCount;")
         expect(matrix_kids > 0, f"ChartKit drew the capability matrix ({matrix_kids} nodes)")
 

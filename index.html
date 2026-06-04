@@ -135,6 +135,9 @@
         <h3>First, the ground.</h3>
         <p>Not one trial, not one review — a corpus. It arrives in steps, each larger than the last.</p>
         <div class="tiles" id="scaleTiles"></div>
+        <figure class="figure" style="margin-top:16px"><svg id="figTau" class="chart"></svg>
+          <figcaption>Heterogeneity (τ) across <span id="tauN">1,168</span> risk-ratio meta-analyses:
+            most carry little, a long tail carries much. <span class="src">Pairwise70 ma4_results</span></figcaption></figure>
       </div>
 
       <div class="beat">
@@ -194,9 +197,14 @@
         <p>Zoom into the first row — all-cause mortality. Behind that single pooled diamond sit
           thirteen real trials, each a point in the funnel: the precise ones near the top, the small
           ones fanning out below. This is the raw material the reproduction floor is measured against.</p>
-        <figure class="figure"><svg id="figFunnel" class="chart"></svg>
-          <figcaption>Funnel of the 13 trials in "All-cause mortality" — per-study logRR vs. standard error.
-            <span class="src">Pairwise70 CD000028_pub4 .rda</span></figcaption></figure>
+        <div class="fig-row">
+          <figure class="figure"><svg id="figFunnel" class="chart"></svg>
+            <figcaption>Funnel of the 13 trials — per-study logRR vs. standard error.
+              <span class="src">Pairwise70 CD000028_pub4 .rda</span></figcaption></figure>
+          <figure class="figure"><svg id="figInterval" class="chart"></svg>
+            <figcaption>Pooled RR with its 95% CI and — wider — its 95% prediction interval, which
+              crosses 1. <span class="src">t-interval, df=k−1</span></figcaption></figure>
+        </div>
       </div>
 
       <div class="beat">
@@ -211,6 +219,9 @@
             <figcaption>GOSH: pooled RR vs. I² across subsets (<span id="goshShown">2,500</span> of
               <span id="goshTotal">8,178</span>). <span class="src">recomputed</span></figcaption></figure>
         </div>
+        <figure class="figure" style="margin-top:16px"><svg id="figCumulative" class="chart"></svg>
+          <figcaption>Cumulative meta-analysis — the 13 trials entered by year; the result settles
+            early and stays. <span class="src">recomputed, random-effects</span></figcaption></figure>
       </div>
 
       <div class="beat ring-close">
@@ -321,7 +332,9 @@
 
 <footer>
   Pairwise70 Workbench · offline hub · engines vendored verbatim from their source repos ·
-  <span id="ver"></span>
+  <span id="ver"></span> ·
+  <a href="https://mahmood726-cyber.github.io/pairwise70-workbench/" style="color:var(--accent)">live ↗</a> ·
+  <a href="https://github.com/mahmood726-cyber/pairwise70-workbench" style="color:var(--accent)">source ↗</a>
 </footer>
 
 <script src="apps/vendor/chartkit.js"></script>
@@ -658,6 +671,30 @@ function renderStory(){
       const gs = document.getElementById("goshShown"), gt = document.getElementById("goshTotal");
       if(gs) gs.textContent = ma4.gosh.shown.toLocaleString();
       if(gt) gt.textContent = ma4.gosh.total.toLocaleString();
+    }
+    // Prediction-interval zone (real pooled RR + CI + PI)
+    if(ma4 && ma4.interval){
+      const iv = ma4.interval;
+      CK.renderInterval(document.getElementById("figInterval"), {
+        est:iv.est, lo:iv.ci[0], hi:iv.ci[1],
+        min:Math.min(iv.pi[0], 0.8)-0.02, max:Math.max(iv.pi[1], 1.0)+0.02,
+        zones:[{from:iv.pi[0], to:iv.pi[1], label:"95% prediction interval"}],
+        refs:[{x:1, label:"no effect"}],
+        measure:"RR", claim:"All-cause mortality", estimand:"Risk ratio (random-effects)"
+      });
+    }
+    // Cumulative meta-analysis by year (real re-pool)
+    if(ma4 && ma4.cumulative && Array.isArray(ma4.cumulative.rows)){
+      CK.renderCumulative(document.getElementById("figCumulative"), ma4.cumulative.rows,
+        {measure:"RR", log:true, null:1, overall:ma4.cumulative.overall, claim:"Cumulative RR by year"});
+    }
+    // Heterogeneity density across the corpus
+    if(ma4 && ma4.tauDensity && Array.isArray(ma4.tauDensity.grid)){
+      CK.renderDensity(document.getElementById("figTau"),
+        {grid:ma4.tauDensity.grid, density:ma4.tauDensity.density},
+        {measure:"τ (REML)", claim:"Heterogeneity across the corpus"});
+      const tn = document.getElementById("tauN");
+      if(tn) tn.textContent = ma4.tauDensity.n.toLocaleString();
     }
     // Capability matrix from the catalog (real, derived)
     renderCapabilityMatrix();

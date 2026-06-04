@@ -165,6 +165,9 @@ def main():
     check('id="figFunnel"' in html, "Story funnel-plot slot present")
     check('id="figLOO"' in html, "Story leave-one-out slot present")
     check('id="figGOSH"' in html, "Story GOSH slot present")
+    check('id="figCumulative"' in html, "Story cumulative-MA slot present")
+    check('id="figInterval"' in html, "Story prediction-interval slot present")
+    check('id="figTau"' in html, "Story heterogeneity-density slot present")
     check('id="figMatrix"' in html, "Story capability-matrix slot present")
     check('id="figBench"' in html, "Benchmark agreement-scatter slot present")
     check("renderCapabilityMatrix" in html, "capability matrix derived from catalog")
@@ -187,6 +190,9 @@ def main():
         gm = re.search(r'"gosh".*?"total":\s*(\d+).*?"shown":\s*(\d+)', mt, re.S)
         check(gm is not None and int(gm.group(1)) > int(gm.group(2)) and int(gm.group(2)) > 100,
               f"GOSH sampled from all subsets (total {gm.group(1) if gm else '?'}, shown {gm.group(2) if gm else '?'})")
+        check('"cumulative"' in mt and mt.count('"label": "+ ') == 13, "cumulative MA has 13 by-year rows")
+        check('"interval"' in mt and '"pi"' in mt, "prediction-interval data present")
+        check('"tauDensity"' in mt and '"grid"' in mt and '"density"' in mt, "heterogeneity density present")
         # the engine should match metafor closely (sanity on the real numbers)
         m = re.search(r'"maxAbsThetaDiff":\s*([0-9.eE+-]+)', mt)
         ok = m and float(m.group(1)) < 1e-2
