@@ -7,6 +7,7 @@
 <meta property="og:title" content="Pairwise70 Workbench">
 <meta property="og:description" content="One offline program to show and run every Pairwise70-family meta-analysis project.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://mahmood726-cyber.github.io/pairwise70-workbench/">
 <style>
   :root{
     --bg:#0f1419; --panel:#171d26; --panel2:#1e2632; --line:#2b3543;
@@ -196,6 +197,20 @@
         <figure class="figure"><svg id="figFunnel" class="chart"></svg>
           <figcaption>Funnel of the 13 trials in "All-cause mortality" — per-study logRR vs. standard error.
             <span class="src">Pairwise70 CD000028_pub4 .rda</span></figcaption></figure>
+      </div>
+
+      <div class="beat">
+        <h3>Then stress-test it.</h3>
+        <p>Does any single trial hold up the result? Leave each one out in turn — the pooled risk
+          ratio barely moves. And across <em>every</em> two-or-more-trial combination of the thirteen,
+          the estimate stays left of 1: a finding that does not depend on which studies you happen to trust.</p>
+        <div class="fig-row">
+          <figure class="figure"><svg id="figLOO" class="chart"></svg>
+            <figcaption>Leave-one-out (random-effects). <span class="src">recomputed from the 13 trials</span></figcaption></figure>
+          <figure class="figure"><svg id="figGOSH" class="chart"></svg>
+            <figcaption>GOSH: pooled RR vs. I² across subsets (<span id="goshShown">2,500</span> of
+              <span id="goshTotal">8,178</span>). <span class="src">recomputed</span></figcaption></figure>
+        </div>
       </div>
 
       <div class="beat ring-close">
@@ -630,6 +645,19 @@ function renderStory(){
       CK.renderFunnel(document.getElementById("figFunnel"),
         ma4.funnel.points.map(p => ({x:p.x, se:p.se, label:p.study})),
         {measure:"logRR", pooled:ma4.funnel.pooled, claim:"Funnel · all-cause mortality"});
+    }
+    // Leave-one-out (real re-pool of the 13 studies)
+    if(ma4 && ma4.loo && Array.isArray(ma4.loo.rows)){
+      CK.renderLOO(document.getElementById("figLOO"), ma4.loo.rows,
+        {measure:"RR", log:true, null:1, overall:ma4.loo.overall, claim:"Leave-one-out RR"});
+    }
+    // GOSH (real subset estimates vs I^2)
+    if(ma4 && ma4.gosh && Array.isArray(ma4.gosh.points)){
+      CK.renderGOSH(document.getElementById("figGOSH"), ma4.gosh.points,
+        {measure:"RR", log:true, null:1, claim:"GOSH"});
+      const gs = document.getElementById("goshShown"), gt = document.getElementById("goshTotal");
+      if(gs) gs.textContent = ma4.gosh.shown.toLocaleString();
+      if(gt) gt.textContent = ma4.gosh.total.toLocaleString();
     }
     // Capability matrix from the catalog (real, derived)
     renderCapabilityMatrix();

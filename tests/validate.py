@@ -163,6 +163,8 @@ def main():
     check('<script src="data/ma4.js">' in html, "hub loads data/ma4.js")
     check('id="figForest"' in html, "Story forest-plot slot present")
     check('id="figFunnel"' in html, "Story funnel-plot slot present")
+    check('id="figLOO"' in html, "Story leave-one-out slot present")
+    check('id="figGOSH"' in html, "Story GOSH slot present")
     check('id="figMatrix"' in html, "Story capability-matrix slot present")
     check('id="figBench"' in html, "Benchmark agreement-scatter slot present")
     check("renderCapabilityMatrix" in html, "capability matrix derived from catalog")
@@ -178,6 +180,13 @@ def main():
         fpts = re.search(r'"funnel".*?"points":\s*\[(.*?)\]\s*\}', mt, re.S)
         nstud = len(re.findall(r'"study"', fpts.group(1))) if fpts else 0
         check(nstud == 13, f"funnel has the real 13 studies (found {nstud})")
+        check('"loo"' in mt and '"overall"' in mt, "leave-one-out data present")
+        # json.dumps escapes the U+2212 minus sign; each LOO row label starts with it
+        nloo = mt.count('\\u2212')
+        check(nloo == 13, f"leave-one-out has 13 rows (found {nloo})")
+        gm = re.search(r'"gosh".*?"total":\s*(\d+).*?"shown":\s*(\d+)', mt, re.S)
+        check(gm is not None and int(gm.group(1)) > int(gm.group(2)) and int(gm.group(2)) > 100,
+              f"GOSH sampled from all subsets (total {gm.group(1) if gm else '?'}, shown {gm.group(2) if gm else '?'})")
         # the engine should match metafor closely (sanity on the real numbers)
         m = re.search(r'"maxAbsThetaDiff":\s*([0-9.eE+-]+)', mt)
         ok = m and float(m.group(1)) < 1e-2

@@ -1,5 +1,7 @@
 # Pairwise70 Workbench
 
+**Live:** https://mahmood726-cyber.github.io/pairwise70-workbench/
+
 One offline program that **shows** every Pairwise70-family project in a single gallery
 and lets you **run / reproduce** their analyses in one place — while leaving every
 individual repo completely untouched.
@@ -87,8 +89,8 @@ so the two can never drift.
 ## Tests
 
 ```
-python tests/validate.py     # 88 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
-python tests/smoke.py         # 31 headless-browser checks (needs Chrome + selenium)
+python tests/validate.py     # 93 structural checks (offline, catalog-sync, R-correctness, a11y, licenses, story/papers/charts)
+python tests/smoke.py         # 33 headless-browser checks (needs Chrome + selenium)
 python tools/build_ma4_data.py   # regenerate data/ma4.js from the real Pairwise70 CSVs + .rda
 ```
 
@@ -98,6 +100,8 @@ Chart types now in use (all real data, offline via the chart-kit):
 - **stat tiles** — corpus scale + benchmark agreement summary
 - **forest plot** — six pooled risk ratios of a real Cochrane review (`CD000028_pub4`), metafor-validated
 - **funnel plot** — the 13 trials inside its all-cause-mortality outcome (per-study logRR vs SE)
+- **leave-one-out** — random-effects re-pool dropping each of the 13 trials
+- **GOSH** — pooled RR vs I² across 2,500 of the 8,178 ≥2-trial subsets
 - **capability matrix** (traffic-light) — which analysis each project supports, derived from the catalog
 - **agreement scatter** — engine vs `metafor` across 100 reviews
 

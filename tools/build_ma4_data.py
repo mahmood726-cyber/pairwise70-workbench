@@ -60,6 +60,70 @@ def read_funnel(rda_dir, pooled_logrr):
             "pooled": round(pooled_logrr, 6), "points": pts}
 
 
+def _pool(yv, vv):
+    """DerSimonian-Laird random-effects pool of (yi, vi). Returns mu, se, tau2, I2(%)."""
+    import math
+    m = len(yv)
+    wf = [1.0 / v for v in vv]
+    sw = sum(wf)
+    ybar = sum(w * y for w, y in zip(wf, yv)) / sw
+    Q = sum(w * (y - ybar) ** 2 for w, y in zip(wf, yv))
+    df = m - 1
+    C = sw - sum(w * w for w in wf) / sw
+    tau2 = max(0.0, (Q - df) / C) if C > 0 else 0.0
+    ws = [1.0 / (v + tau2) for v in vv]
+    sws = sum(ws)
+    mu = sum(w * y for w, y in zip(ws, yv)) / sws
+    se = math.sqrt(1.0 / sws)
+    i2 = max(0.0, (Q - df) / Q) * 100.0 if Q > 0 else 0.0
+    return mu, se, tau2, i2
+
+
+def compute_loo(points):
+    """Leave-one-out random-effects re-pool of the real per-study (logRR, SE)."""
+    import math
+    yv = [p["x"] for p in points]
+    vv = [p["se"] ** 2 for p in points]
+    mu0, se0, _, _ = _pool(yv, vv)
+    rows = []
+    for i, p in enumerate(points):
+        yy = yv[:i] + yv[i + 1:]
+        vv2 = vv[:i] + vv[i + 1:]
+        mu, se, _, _ = _pool(yy, vv2)
+        rows.append({"label": "− " + p["study"],
+                     "est": round(math.exp(mu), 4),
+                     "lo": round(math.exp(mu - 1.959964 * se), 4),
+                     "hi": round(math.exp(mu + 1.959964 * se), 4)})
+    return {"overall": round(math.exp(mu0), 4), "rows": rows}
+
+
+def compute_gosh(points, cap=2500):
+    """GOSH: fixed-effect pooled estimate vs I^2 over every >=2-study subset."""
+    import math
+    yv = [p["x"] for p in points]
+    vv = [p["se"] ** 2 for p in points]
+    m = len(points)
+    allpts = []
+    for mask in range(1, 1 << m):
+        idx = [i for i in range(m) if mask & (1 << i)]
+        if len(idx) < 2:
+            continue
+        yy = [yv[i] for i in idx]
+        vv2 = [vv[i] for i in idx]
+        wf = [1.0 / v for v in vv2]
+        sw = sum(wf)
+        ybar = sum(w * y for w, y in zip(wf, yy)) / sw          # fixed-effect estimate
+        Q = sum(w * (y - ybar) ** 2 for w, y in zip(wf, yy))
+        df = len(idx) - 1
+        i2 = max(0.0, (Q - df) / Q) * 100.0 if Q > 0 else 0.0
+        allpts.append({"x": round(math.exp(ybar), 4), "y": round(i2, 1)})
+    total = len(allpts)
+    if total > cap:                                              # deterministic systematic sample
+        step = total / cap
+        allpts = [allpts[int(i * step)] for i in range(cap)]
+    return {"total": total, "shown": len(allpts), "points": allpts}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default=str(DEFAULT_SRC), help="dir holding the ma4_*.csv files")
@@ -102,10 +166,16 @@ def main():
     pooled1 = next((r["theta"] for r in forest if r["label"] == "All-cause mortality"), 0.0)
     funnel = read_funnel(args.rda, pooled1)
 
+    # Leave-one-out + GOSH from the real 13 per-study points (same outcome as the funnel)
+    loo = compute_loo(funnel["points"]) if funnel else None
+    gosh = compute_gosh(funnel["points"]) if funnel else None
+
     data = {
         "forestReview": FOREST_REVIEW,
         "forest": forest,
         "funnel": funnel,
+        "loo": loo,
+        "gosh": gosh,
         "agreement": agree,
         "summary": {
             "nReviews": len(agree),

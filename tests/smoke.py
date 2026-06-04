@@ -70,6 +70,10 @@ def main():
         expect(forest_kids > 0, f"ChartKit drew the real forest plot ({forest_kids} nodes)")
         funnel_kids = driver.execute_script("return document.getElementById('figFunnel').childElementCount;")
         expect(funnel_kids > 0, f"ChartKit drew the real funnel plot ({funnel_kids} nodes)")
+        loo_kids = driver.execute_script("return document.getElementById('figLOO').childElementCount;")
+        expect(loo_kids > 0, f"ChartKit drew the leave-one-out forest ({loo_kids} nodes)")
+        gosh_pts = driver.execute_script("return document.getElementById('figGOSH').querySelectorAll('circle').length;")
+        expect(gosh_pts > 500, f"ChartKit drew the GOSH cloud ({gosh_pts} subset points)")
         matrix_kids = driver.execute_script("return document.getElementById('figMatrix').childElementCount;")
         expect(matrix_kids > 0, f"ChartKit drew the capability matrix ({matrix_kids} nodes)")
 
